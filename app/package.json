@@ -1,0 +1,16 @@
+{
+    "name": "text-magic-editor",
+    "version": "1.0.0",
+    "description": "",
+    "scripts": {
+        "start": "vite"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@text-magic/renderer": "workspace:*",
+        "@text-magic/input": "workspace:*"
+    },
+    "devDependencies": {}
+}

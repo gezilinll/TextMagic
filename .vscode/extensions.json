@@ -1,0 +1,28 @@
+{
+    "recommendations": [
+        "andersonbruceb.json-in-html",
+        "DigitalBrainstem.javascript-ejs-support",
+        "antfu.file-nesting",
+        "DavidAnson.vscode-markdownlint",
+        "dbaeumer.vscode-eslint",
+        "DigitalBrainstem.javascript-ejs-support",
+        "dzhavat.css-initial-value",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "meganrogge.template-string-converter",
+        "p42ai.refactor",
+        "pflannery.vscode-versionlens",
+        "streetsidesoftware.code-spell-checker",
+        "stylelint.vscode-stylelint",
+        "vunguyentuan.vscode-css-variables",
+        "yoavbls.pretty-ts-errors",
+        "YuTengjing.vscode-neo-file-utils",
+        "YuTengjing.package-manager-enhancer",
+        "YuTengjing.better-colorizer",
+        "YuTengjing.reload-can-solve-any-problems",
+        "YuTengjing.vscode-archive",
+        "zyrong.node-modules",
+        "vue.volar"
+    ],
+    "unwantedRecommendations": ["octref.vetur"]
+}

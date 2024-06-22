@@ -1,0 +1,42 @@
+{
+    "include": ["src/**/*.ts", "src/**/*.d.ts"],
+    "compilerOptions": {
+        "rootDir": "./src",
+        "types": ["vitest/globals"],
+        /* Language and Environment */
+        "target": "esnext",
+        "experimentalDecorators": true,
+
+        /* Modules */
+        "module": "esnext",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+
+        /* JavaScript Support */
+        "allowJs": true,
+
+        /* Emit */
+        "removeComments": true,
+        "inlineSources": false,
+
+        /* Interop Constraints */
+        "isolatedModules": true,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+
+        /* Type Checking */
+        "strict": true,
+        "strictFunctionTypes": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+
+        /* Output Formatting */
+        "preserveWatchOutput": true,
+
+        /* Completeness */
+        "skipLibCheck": true
+    }
+}
