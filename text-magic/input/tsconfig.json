@@ -2,7 +2,6 @@
     "include": ["src/**/*.ts", "src/**/*.d.ts"],
     "compilerOptions": {
         "rootDir": "./src",
-        "types": ["vitest/globals"],
         /* Language and Environment */
         "target": "esnext",
         "experimentalDecorators": true,
@@ -27,6 +26,7 @@
 
         /* Type Checking */
         "strict": true,
+        "strictNullChecks": true,
         "strictFunctionTypes": true,
         "noImplicitAny": true,
         "noImplicitThis": true,

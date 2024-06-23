@@ -3,7 +3,7 @@
         "target": "ESNext",
         "useDefineForClassFields": true,
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
-        "types": [],
+        "types": ["vite/client"],
         "composite": true,
         "skipLibCheck": true,
         "module": "ESNext",

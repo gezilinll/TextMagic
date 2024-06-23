@@ -63,16 +63,26 @@ importers:
 
   app:
     dependencies:
-      '@text-magic/input':
+      text-magic-input:
         specifier: workspace:*
-        version: link:../text-magic/input
-      '@text-magic/renderer':
-        specifier: workspace:*
-        version: link:../text-magic/renderer
+        version: link:../text-magic/component
 
   text-magic/common: {}
 
-  text-magic/input: {}
+  text-magic/component:
+    dependencies:
+      '@text-magic/input':
+        specifier: workspace:*
+        version: link:../input
+      '@text-magic/renderer':
+        specifier: workspace:*
+        version: link:../renderer
+
+  text-magic/input:
+    dependencies:
+      '@text-magic/common':
+        specifier: workspace:*
+        version: link:../common
 
   text-magic/renderer: {}
 

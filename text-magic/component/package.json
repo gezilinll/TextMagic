@@ -1,5 +1,5 @@
 {
-    "name": "@text-magic/input",
+    "name": "text-magic-input",
     "version": "0.0.1",
     "description": "",
     "type": "module",
@@ -25,7 +25,8 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@text-magic/common": "workspace:*"
+        "@text-magic/renderer": "workspace:*",
+        "@text-magic/input": "workspace:*"
     },
     "devDependencies": {}
 }

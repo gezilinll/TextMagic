@@ -7,6 +7,7 @@
         "text-magic/**"
     ],
     "scripts": {
+        "dev": "pnpm -F editor dev",
         "test": "turbo test",
         "clean": "rm -rf node_modules && pnpm -r --parallel exec rm -rf node_modules",
         "build": "turbo build"
