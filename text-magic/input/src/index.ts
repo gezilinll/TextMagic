@@ -1,4 +1,13 @@
-import { Rect, TMInput as IInput, TMRenderer, TMTextData, TMTextMetrics } from '@text-magic/common';
+import {
+    Rect,
+    TMInput as IInput,
+    TMInputOptions,
+    TMRenderer,
+    TMSelectRange,
+    TMTextData,
+    TMTextMetrics,
+} from '@text-magic/common';
+import { throttle } from 'lodash';
 
 export class TMInput implements IInput {
     private _textData: TMTextData;
@@ -6,13 +15,31 @@ export class TMInput implements IInput {
     private _renderer: TMRenderer | null = null;
     private _textArea: HTMLTextAreaElement;
     private _cursorPosition = -1;
+    private _selectRange: TMSelectRange;
+    private _renderRange: any = null;
     private _cursor: HTMLDivElement;
     private _blinkTimer = Number.NaN;
     private _isMouseDown = false;
     private _isCompositing = false;
 
-    constructor() {
-        this._textData = { width: 100, height: 100, fragments: [] };
+    private _defaultOptions: TMInputOptions;
+
+    constructor(options?: TMInputOptions) {
+        this._defaultOptions = options || {
+            fontSize: 16,
+            fontColor: '#000000',
+            fontFamily: 'Yahei',
+            width: 260,
+            height: 200,
+        };
+
+        this._textData = {
+            width: this._defaultOptions.width,
+            height: this._defaultOptions.height,
+            fragments: [],
+        };
+
+        this._selectRange = { start: -1, end: -1, color: '#0000FF', opacity: 0.2 };
 
         this._textArea = document.createElement('textarea');
         this._textArea.style.position = 'fixed';
@@ -29,6 +56,7 @@ export class TMInput implements IInput {
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
         this._textArea.addEventListener('blur', () => {
             this._hideCursor();
+            this._hideSelectRange();
         });
 
         this._cursor = document.createElement('div');
@@ -43,6 +71,10 @@ export class TMInput implements IInput {
         this._renderer
             .getContainer()
             .addEventListener('mousedown', this._handleMouseDown.bind(this));
+        this._renderer
+            .getContainer()
+            .addEventListener('mousemove', this._handleMouseMove.bind(this));
+        this._renderer.getContainer().addEventListener('mouseup', this._handleMouseUp.bind(this));
 
         this._renderer.getContainer().appendChild(this._textArea);
 
@@ -73,6 +105,9 @@ export class TMInput implements IInput {
                     return {
                         ...(cur || {}),
                         content: item,
+                        fontSize: this._defaultOptions.fontSize,
+                        color: this._defaultOptions.fontColor,
+                        fontFamily: this._defaultOptions.fontFamily,
                     };
                 })
             );
@@ -90,20 +125,64 @@ export class TMInput implements IInput {
             e.offsetX,
             e.offsetY
         ).indexOfFullText;
+        this._selectRange.start = this._cursorPosition;
         this._showCursor();
+    }
+
+    private _handleMouseMove(e: MouseEvent) {
+        if (!this._isMouseDown) {
+            return;
+        }
+        if (!this._renderRange) {
+            this._renderRange = throttle(
+                (event: MouseEvent) => {
+                    if (!this._isMouseDown) {
+                        return;
+                    }
+                    const positionIndex = this.renderer.getPositionForCursor(
+                        event.offsetX,
+                        event.offsetY
+                    ).indexOfFullText;
+
+                    if (positionIndex !== -1) {
+                        this._selectRange.end = positionIndex;
+                        if (Math.abs(this._selectRange.end - this._selectRange.start) > 0) {
+                            this._hideCursor();
+                            this.renderer.render(this._selectRange);
+                        }
+                    }
+                },
+                100,
+                { leading: true }
+            );
+        }
+        this._renderRange(e);
+    }
+
+    private _handleMouseUp() {
+        this._isMouseDown = false;
     }
 
     private _handleKeyDown() {}
 
     private _showCursor() {
+        this._hideSelectRange();
         clearTimeout(this._blinkTimer);
         const textInfo: Rect =
             this._cursorPosition >= 0
                 ? this.textMetrics.characterBounds[this._cursorPosition]
-                : { x: 0, y: 0, width: 0, height: 100 };
+                : {
+                      x: 0,
+                      y: 0,
+                      width: 0,
+                      height:
+                          this._textMetrics && this.textMetrics.characterBounds.length > 0
+                              ? this.textMetrics.characterBounds[0].height
+                              : this._defaultOptions.fontSize,
+                  };
         this._cursor.style.left = `${textInfo.x + textInfo.width}px`;
         this._cursor.style.top = `${textInfo.y}px`;
-        this._cursor.style.height = `${textInfo.height * 2}px`;
+        this._cursor.style.height = `${textInfo.height}px`;
         this._cursor.style.opacity = '1';
         setTimeout(() => {
             this._textArea.focus();
@@ -112,7 +191,19 @@ export class TMInput implements IInput {
         }, 0);
     }
 
-    private _hideCursor() {}
+    private _hideCursor() {
+        clearTimeout(this._blinkTimer);
+        this._cursor.style.display = 'none';
+        this._cursorPosition = -1;
+    }
+
+    private _hideSelectRange() {
+        if (this._selectRange.start !== -1 || this._selectRange.end !== -1) {
+            this._selectRange.start === -1;
+            this._selectRange.end === -1;
+            this.renderer.render();
+        }
+    }
 
     private _blinkCursor(opacity: number) {
         this._blinkTimer = setTimeout(() => {

@@ -10,7 +10,7 @@ export interface TMTextRow {
     width: number;
     height: number;
     originHeight: number;
-    maxDescent: number;
+    fontDescent: number;
     fragments: (TMTextFragment & { font: string; bound: Rect })[];
 }
 
@@ -18,6 +18,7 @@ export interface TMTextFragment {
     content: string;
     color: string;
     fontSize: number;
+    fontFamily: string;
     fontStyle: string;
 }
 

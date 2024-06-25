@@ -6,6 +6,13 @@ export interface TMCharacterPosition {
     indexOfFullText: number;
 }
 
+export interface TMSelectRange {
+    start: number;
+    end: number;
+    color: string;
+    opacity: number;
+}
+
 export interface TMRenderer {
     getContainer(): HTMLDivElement;
 
@@ -13,5 +20,5 @@ export interface TMRenderer {
 
     measure(data: TMTextData): TMTextMetrics;
 
-    render();
+    render(selectRange?: TMSelectRange);
 }

@@ -2,6 +2,7 @@ import {
     Rect,
     TMCharacterPosition,
     TMRenderer as IRenderer,
+    TMSelectRange,
     TMTextData,
     TMTextFragment,
     TMTextMetrics,
@@ -39,7 +40,12 @@ export class TMRenderer implements IRenderer {
             for (let j = 0; j < currentRow.fragments.length; j++) {
                 const bound = currentRow.fragments[j].bound;
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
-                    return { whichRow: i, indexOfRow: j, indexOfFullText: indexOfFullText + j };
+                    const indexOfRow = mouseX < bound.x + bound.width / 2 ? j - 1 : j;
+                    return {
+                        whichRow: i,
+                        indexOfRow,
+                        indexOfFullText: indexOfFullText + indexOfRow,
+                    };
                 }
             }
             return {
@@ -48,7 +54,13 @@ export class TMRenderer implements IRenderer {
                 indexOfFullText: indexOfFullText + currentRow.fragments.length - 1,
             };
         }
-        return { whichRow: 0, indexOfRow: -1, indexOfFullText: -1 };
+        const whichRow = Math.max(0, this._textMetrics.rows.length - 1);
+        const indexOfRow =
+            this._textMetrics.rows.length > 0
+                ? this._textMetrics.rows[this._textMetrics.rows.length - 1].fragments.length - 1
+                : -1;
+        indexOfFullText = this._textMetrics.characterBounds.length - 1;
+        return { whichRow, indexOfRow, indexOfFullText };
     }
 
     measure(data: TMTextData) {
@@ -61,7 +73,7 @@ export class TMRenderer implements IRenderer {
             width: 0,
             height: 0,
             originHeight: 0,
-            maxDescent: 0,
+            fontDescent: 0,
             fragments: [],
         });
         let x = 0;
@@ -74,17 +86,24 @@ export class TMRenderer implements IRenderer {
                 height: 0,
                 ascent: 0,
                 descent: 0,
+                fontDescent: 0,
             };
             if (item.content === '\n') {
                 measureInfo.height = fontSize;
             } else {
                 ctx.font = font;
-                const { width, actualBoundingBoxAscent, actualBoundingBoxDescent } =
-                    ctx.measureText(item.content);
+                const {
+                    width,
+                    actualBoundingBoxAscent,
+                    actualBoundingBoxDescent,
+                    fontBoundingBoxAscent,
+                    fontBoundingBoxDescent,
+                } = ctx.measureText(item.content);
                 measureInfo.width = width;
-                measureInfo.height = actualBoundingBoxAscent + actualBoundingBoxDescent;
+                measureInfo.height = fontBoundingBoxAscent + fontBoundingBoxDescent;
                 measureInfo.ascent = actualBoundingBoxAscent;
                 measureInfo.descent = actualBoundingBoxDescent;
+                measureInfo.fontDescent = fontBoundingBoxDescent;
             }
             const curRow = rows[rows.length - 1];
             if (curRow.width + measureInfo.width <= data.width && item.content !== '\n') {
@@ -105,33 +124,65 @@ export class TMRenderer implements IRenderer {
                     height: measureInfo.height,
                 });
                 curRow.width += measureInfo.width;
-                curRow.height = Math.max(curRow.height, measureInfo.height);
+                curRow.height = measureInfo.height;
                 curRow.originHeight = Math.max(curRow.originHeight, measureInfo.height);
-                curRow.maxDescent = Math.max(curRow.maxDescent, measureInfo.descent);
-                x += measureInfo.width;
+                curRow.fontDescent = measureInfo.fontDescent;
             } else {
                 x = 0;
                 y += curRow.height;
                 rows.push({
                     y,
-                    width: 0,
-                    height: 0,
-                    originHeight: 0,
-                    maxDescent: 0,
-                    fragments: [],
+                    width: measureInfo.width,
+                    height: measureInfo.height,
+                    originHeight: measureInfo.height,
+                    fontDescent: measureInfo.descent,
+                    maxDescent: measureInfo.descent,
+                    fragments: [
+                        {
+                            ...item,
+                            font,
+                            bound: {
+                                x,
+                                y,
+                                width: measureInfo.width,
+                                height: measureInfo.height,
+                            },
+                        },
+                    ],
+                });
+                characterBounds.push({
+                    x,
+                    y,
+                    width: measureInfo.width,
+                    height: measureInfo.height,
                 });
             }
+            x += measureInfo.width;
         });
         this._textMetrics = { width: data.width, height: data.height, rows, characterBounds };
         return this._textMetrics;
     }
 
-    render() {
+    render(selectRange?: TMSelectRange) {
         this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._canvas.width = this._textMetrics.width;
         this._canvas.height = this._textMetrics.height;
+        this._canvas.style.width = `${this._textMetrics.width}px`;
+        this._canvas.style.height = `${this._textMetrics.height}px`;
         const ctx = this._context;
         let renderHeight = 0;
+        let selectStart = -1;
+        let selectEnd = -1;
+        if (
+            selectRange &&
+            selectRange.start !== selectRange.end &&
+            selectRange.start !== -1 &&
+            selectRange.end !== -1
+        ) {
+            selectStart = Math.min(selectRange.start, selectRange.end);
+            selectEnd = Math.max(selectRange.start, selectRange.end);
+        }
+        let renderIndex = 0;
         this._textMetrics.rows.forEach((row) => {
             let renderWidth = 0;
             row.fragments.forEach((item) => {
@@ -144,9 +195,25 @@ export class TMRenderer implements IRenderer {
                 ctx.fillText(
                     item.content,
                     renderWidth,
-                    renderHeight + row.height - (row.height - row.originHeight) / 2 - row.maxDescent
+                    renderHeight + row.height - row.fontDescent
                 );
+                if (selectStart !== selectEnd) {
+                    if (renderIndex > selectStart && renderIndex <= selectEnd) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.globalAlpha = selectRange!.opacity;
+                        ctx.fillStyle = selectRange!.color;
+                        ctx.fillRect(
+                            renderWidth,
+                            renderHeight,
+                            item.bound.width,
+                            item.bound.height
+                        );
+                        ctx.restore();
+                    }
+                }
                 renderWidth += item.bound.width;
+                renderIndex++;
                 ctx.restore();
             });
             renderHeight += row.height;
@@ -154,6 +221,6 @@ export class TMRenderer implements IRenderer {
     }
 
     private _getFont(fragment: TMTextFragment) {
-        return `${fragment.fontSize}px`;
+        return `${fragment.fontSize}px ${fragment.fontFamily}`;
     }
 }
