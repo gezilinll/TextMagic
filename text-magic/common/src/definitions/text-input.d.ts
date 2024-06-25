@@ -10,4 +10,6 @@ export interface TMInputOptions {
 
 export interface TMInput {
     bindRenderer(renderer: TMRenderer);
+
+    destroy();
 }

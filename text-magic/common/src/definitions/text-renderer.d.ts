@@ -21,4 +21,8 @@ export interface TMRenderer {
     measure(data: TMTextData): TMTextMetrics;
 
     render(selectRange?: TMSelectRange);
+
+    isUseDevicePixelRatio(): boolean;
+
+    notifyDevicePixelRatioChanged();
 }

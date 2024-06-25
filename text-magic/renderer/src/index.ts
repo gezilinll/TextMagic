@@ -136,7 +136,6 @@ export class TMRenderer implements IRenderer {
                     height: measureInfo.height,
                     originHeight: measureInfo.height,
                     fontDescent: measureInfo.descent,
-                    maxDescent: measureInfo.descent,
                     fragments: [
                         {
                             ...item,
@@ -165,8 +164,8 @@ export class TMRenderer implements IRenderer {
 
     render(selectRange?: TMSelectRange) {
         this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
-        this._canvas.width = this._textMetrics.width;
-        this._canvas.height = this._textMetrics.height;
+        this._canvas.width = this._textMetrics.width * window.devicePixelRatio;
+        this._canvas.height = this._textMetrics.height * window.devicePixelRatio;
         this._canvas.style.width = `${this._textMetrics.width}px`;
         this._canvas.style.height = `${this._textMetrics.height}px`;
         const ctx = this._context;
@@ -220,7 +219,15 @@ export class TMRenderer implements IRenderer {
         });
     }
 
+    isUseDevicePixelRatio(): boolean {
+        return true;
+    }
+
+    notifyDevicePixelRatioChanged() {
+        this.render();
+    }
+
     private _getFont(fragment: TMTextFragment) {
-        return `${fragment.fontSize}px ${fragment.fontFamily}`;
+        return `${fragment.fontSize * window.devicePixelRatio}px ${fragment.fontFamily}`;
     }
 }

@@ -12,17 +12,22 @@ import { throttle } from 'lodash';
 export class TMInput implements IInput {
     private _textData: TMTextData;
     private _textMetrics: TMTextMetrics | null = null;
-    private _renderer: TMRenderer | null = null;
     private _textArea: HTMLTextAreaElement;
+    private _cursor: HTMLDivElement;
+
+    private _renderer: TMRenderer | null = null;
     private _cursorPosition = -1;
     private _selectRange: TMSelectRange;
     private _renderRange: any = null;
-    private _cursor: HTMLDivElement;
     private _blinkTimer = Number.NaN;
+
     private _isMouseDown = false;
     private _isCompositing = false;
-
+    private _media: MediaQueryList;
+    private _devicePixelRatioListener: any;
     private _defaultOptions: TMInputOptions;
+
+    private _listeners: Record<string, any> = {};
 
     constructor(options?: TMInputOptions) {
         this._defaultOptions = options || {
@@ -63,6 +68,10 @@ export class TMInput implements IInput {
         this._cursor.style.position = 'absolute';
         this._cursor.style.width = '1px';
         this._cursor.style.backgroundColor = '#000';
+
+        this._media = window!.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        this._devicePixelRatioListener = this._handleDevicePixelRatioChanged.bind(this);
+        this._media.addEventListener('change', this._devicePixelRatioListener);
     }
 
     bindRenderer(renderer: TMRenderer) {
@@ -87,6 +96,19 @@ export class TMInput implements IInput {
 
     blur() {
         this._hideCursor();
+    }
+
+    destroy() {
+        this._media.removeEventListener('change', this._devicePixelRatioListener);
+    }
+
+    private _handleDevicePixelRatioChanged() {
+        if (this._renderer && this._renderer.isUseDevicePixelRatio()) {
+            this._hideSelectRange();
+            this._hideCursor();
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.notifyDevicePixelRatioChanged();
+        }
     }
 
     private _handleInput(e: InputEvent) {
@@ -122,8 +144,8 @@ export class TMInput implements IInput {
         this._isMouseDown = true;
 
         this._cursorPosition = this.renderer.getPositionForCursor(
-            e.offsetX,
-            e.offsetY
+            e.offsetX * this.devicePixelRatio,
+            e.offsetY * this.devicePixelRatio
         ).indexOfFullText;
         this._selectRange.start = this._cursorPosition;
         this._showCursor();
@@ -140,8 +162,8 @@ export class TMInput implements IInput {
                         return;
                     }
                     const positionIndex = this.renderer.getPositionForCursor(
-                        event.offsetX,
-                        event.offsetY
+                        event.offsetX * this.devicePixelRatio,
+                        event.offsetY * this.devicePixelRatio
                     ).indexOfFullText;
 
                     if (positionIndex !== -1) {
@@ -178,11 +200,11 @@ export class TMInput implements IInput {
                       height:
                           this._textMetrics && this.textMetrics.characterBounds.length > 0
                               ? this.textMetrics.characterBounds[0].height
-                              : this._defaultOptions.fontSize,
+                              : this._defaultOptions.fontSize * this.devicePixelRatio,
                   };
-        this._cursor.style.left = `${textInfo.x + textInfo.width}px`;
+        this._cursor.style.left = `${(textInfo.x + textInfo.width) / this.devicePixelRatio}px`;
         this._cursor.style.top = `${textInfo.y}px`;
-        this._cursor.style.height = `${textInfo.height}px`;
+        this._cursor.style.height = `${textInfo.height / this.devicePixelRatio}px`;
         this._cursor.style.opacity = '1';
         setTimeout(() => {
             this._textArea.focus();
@@ -218,5 +240,9 @@ export class TMInput implements IInput {
 
     private get textMetrics() {
         return this._textMetrics!;
+    }
+
+    private get devicePixelRatio() {
+        return this.renderer.isUseDevicePixelRatio() ? window.devicePixelRatio : 1;
     }
 }
