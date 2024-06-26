@@ -48,7 +48,7 @@ export class TMInput implements IInput {
 
         this._textArea = document.createElement('textarea');
         this._textArea.style.position = 'fixed';
-        this._textArea.style.left = '300px';
+        this._textArea.style.left = '-99999px';
         this._textArea.addEventListener('input', (event) => {
             this._handleInput(event as InputEvent);
         });
@@ -59,9 +59,22 @@ export class TMInput implements IInput {
             this._isCompositing = false;
         });
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
-        this._textArea.addEventListener('blur', () => {
-            this._hideCursor();
-            this._hideSelectRange();
+
+        document.addEventListener('mousedown', (event) => {
+            if (!this._renderer) {
+                return;
+            }
+            const bound = this._renderer.getContainer().getBoundingClientRect();
+            if (
+                event.clientX >= bound.x &&
+                event.clientX <= bound.x + bound.width &&
+                event.clientY >= bound.y &&
+                event.clientY <= bound.y + bound.height
+            ) {
+                this.focus();
+            } else {
+                this.blur();
+            }
         });
 
         this._cursor = document.createElement('div');
@@ -96,6 +109,7 @@ export class TMInput implements IInput {
 
     blur() {
         this._hideCursor();
+        this._hideSelectRange();
     }
 
     destroy() {
@@ -148,6 +162,7 @@ export class TMInput implements IInput {
             e.offsetY * this.devicePixelRatio
         ).indexOfFullText;
         this._selectRange.start = this._cursorPosition;
+        this.focus();
         this._showCursor();
     }
 
@@ -185,25 +200,62 @@ export class TMInput implements IInput {
         this._isMouseDown = false;
     }
 
-    private _handleKeyDown() {}
+    private _handleKeyDown(e: KeyboardEvent) {
+        if (e.code === 'Enter') {
+            this._newLine();
+            e.preventDefault();
+        } else if (e.code === 'Backspace') {
+            this._delete();
+            e.preventDefault();
+        } else if (e.code === 'Tab') {
+            this._tab();
+            e.preventDefault();
+        }
+    }
+
+    private _newLine() {
+        this._textData.fragments.splice(this._cursorPosition + 1, 0, {
+            content: '\n',
+            fontSize: this._defaultOptions.fontSize,
+            color: '',
+            fontFamily: '',
+            fontStyle: '',
+        });
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render();
+        this._cursorPosition++;
+        this._showCursor();
+    }
+
+    private _delete() {}
+
+    private _tab() {}
 
     private _showCursor() {
         this._hideSelectRange();
         clearTimeout(this._blinkTimer);
-        const textInfo: Rect =
-            this._cursorPosition >= 0
-                ? this.textMetrics.characterBounds[this._cursorPosition]
-                : {
-                      x: 0,
-                      y: 0,
-                      width: 0,
-                      height:
-                          this._textMetrics && this.textMetrics.characterBounds.length > 0
-                              ? this.textMetrics.characterBounds[0].height
-                              : this._defaultOptions.fontSize * this.devicePixelRatio,
-                  };
+        const textInfo: Rect = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: this._defaultOptions.fontSize * this.devicePixelRatio,
+        };
+        if (this._cursorPosition >= 0) {
+            const fragment = this._textData.fragments[this._cursorPosition];
+            const bounds = this.textMetrics.characterBounds[this._cursorPosition];
+            if (fragment.content === '\n') {
+                const nextRow = this.textMetrics.rows[bounds.rowIndex + 1];
+                textInfo.y = nextRow.y;
+                textInfo.height = nextRow.height;
+            } else {
+                textInfo.x = bounds.x + bounds.width;
+                textInfo.y = bounds.y;
+                textInfo.height = this.textMetrics.rows[bounds.rowIndex].height;
+            }
+        }
+
         this._cursor.style.left = `${(textInfo.x + textInfo.width) / this.devicePixelRatio}px`;
-        this._cursor.style.top = `${textInfo.y}px`;
+        this._cursor.style.top = `${textInfo.y / this.devicePixelRatio}px`;
         this._cursor.style.height = `${textInfo.height / this.devicePixelRatio}px`;
         this._cursor.style.opacity = '1';
         setTimeout(() => {
@@ -228,6 +280,7 @@ export class TMInput implements IInput {
     }
 
     private _blinkCursor(opacity: number) {
+        clearTimeout(this._blinkTimer);
         this._blinkTimer = setTimeout(() => {
             this._cursor.style.opacity = String(opacity);
             this._blinkCursor(opacity === 0 ? 1 : 0);

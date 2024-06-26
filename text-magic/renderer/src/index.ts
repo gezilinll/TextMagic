@@ -67,7 +67,7 @@ export class TMRenderer implements IRenderer {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d')!;
         const rows: TMTextRow[] = [];
-        const characterBounds: Rect[] = [];
+        const characterBounds: (Rect & { rowIndex: number })[] = [];
         rows.push({
             y: 0,
             width: 0,
@@ -89,7 +89,7 @@ export class TMRenderer implements IRenderer {
                 fontDescent: 0,
             };
             if (item.content === '\n') {
-                measureInfo.height = fontSize;
+                measureInfo.height = fontSize * window.devicePixelRatio;
             } else {
                 ctx.font = font;
                 const {
@@ -106,7 +106,38 @@ export class TMRenderer implements IRenderer {
                 measureInfo.fontDescent = fontBoundingBoxDescent;
             }
             const curRow = rows[rows.length - 1];
-            if (curRow.width + measureInfo.width <= data.width && item.content !== '\n') {
+            if (item.content === '\n') {
+                if (curRow.height <= 0) {
+                    curRow.height = measureInfo.height;
+                }
+                curRow.fragments.push({
+                    ...item,
+                    font: '',
+                    bound: {
+                        x,
+                        y,
+                        width: measureInfo.width,
+                        height: measureInfo.height,
+                    },
+                });
+                characterBounds.push({
+                    x,
+                    y,
+                    width: 0,
+                    height: measureInfo.height,
+                    rowIndex: rows.length - 1,
+                });
+                x = 0;
+                y += curRow.height;
+                rows.push({
+                    y,
+                    width: 0,
+                    height: measureInfo.height,
+                    originHeight: measureInfo.height,
+                    fontDescent: 0,
+                    fragments: [],
+                });
+            } else if (curRow.width + measureInfo.width <= data.width) {
                 curRow.fragments.push({
                     ...item,
                     font,
@@ -122,6 +153,7 @@ export class TMRenderer implements IRenderer {
                     y,
                     width: measureInfo.width,
                     height: measureInfo.height,
+                    rowIndex: rows.length - 1,
                 });
                 curRow.width += measureInfo.width;
                 curRow.height = measureInfo.height;
@@ -154,6 +186,7 @@ export class TMRenderer implements IRenderer {
                     y,
                     width: measureInfo.width,
                     height: measureInfo.height,
+                    rowIndex: rows.length - 1,
                 });
             }
             x += measureInfo.width;
@@ -196,6 +229,7 @@ export class TMRenderer implements IRenderer {
                     renderWidth,
                     renderHeight + row.height - row.fontDescent
                 );
+                ctx.restore();
                 if (selectStart !== selectEnd) {
                     if (renderIndex > selectStart && renderIndex <= selectEnd) {
                         ctx.save();
@@ -213,7 +247,6 @@ export class TMRenderer implements IRenderer {
                 }
                 renderWidth += item.bound.width;
                 renderIndex++;
-                ctx.restore();
             });
             renderHeight += row.height;
         });

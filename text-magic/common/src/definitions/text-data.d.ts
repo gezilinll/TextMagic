@@ -32,5 +32,5 @@ export interface TMTextMetrics {
     width: number;
     height: number;
     rows: TMTextRow[];
-    characterBounds: Rect[];
+    characterBounds: (Rect & { rowIndex: number })[];
 }
