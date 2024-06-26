@@ -226,7 +226,25 @@ export class TMInput implements IInput {
         this._showCursor();
     }
 
-    private _delete() {}
+    private _delete() {
+        let startIndex = -1;
+        let length = 0;
+        if (this._cursorPosition >= 0) {
+            startIndex = this._cursorPosition;
+            length = 1;
+            this._cursorPosition--;
+        } else if (this._selectRange.end !== this._selectRange.start) {
+            this._cursorPosition = Math.min(this._selectRange.start, this._selectRange.end);
+            startIndex = this._cursorPosition + 1;
+            length = Math.abs(this._selectRange.end - this._selectRange.start);
+        }
+        if (length > 0) {
+            this._textData.fragments.splice(startIndex, length);
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.render();
+            this._showCursor();
+        }
+    }
 
     private _tab() {}
 
