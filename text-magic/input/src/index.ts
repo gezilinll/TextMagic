@@ -160,7 +160,7 @@ export class TMInput implements IInput {
         this._cursorPosition = this.renderer.getPositionForCursor(
             e.offsetX * this.devicePixelRatio,
             e.offsetY * this.devicePixelRatio
-        ).indexOfFullText;
+        );
         this._selectRange.start = this._cursorPosition;
         this.focus();
         this._showCursor();
@@ -179,8 +179,7 @@ export class TMInput implements IInput {
                     const positionIndex = this.renderer.getPositionForCursor(
                         event.offsetX * this.devicePixelRatio,
                         event.offsetY * this.devicePixelRatio
-                    ).indexOfFullText;
-
+                    );
                     if (positionIndex !== -1) {
                         this._selectRange.end = positionIndex;
                         if (Math.abs(this._selectRange.end - this._selectRange.start) > 0) {

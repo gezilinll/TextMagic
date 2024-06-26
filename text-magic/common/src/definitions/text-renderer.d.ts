@@ -1,11 +1,5 @@
 import { TMTextData, TMTextMetrics } from './text-data';
 
-export interface TMCharacterPosition {
-    whichRow: number;
-    indexOfRow: number;
-    indexOfFullText: number;
-}
-
 export interface TMSelectRange {
     start: number;
     end: number;
@@ -16,7 +10,7 @@ export interface TMSelectRange {
 export interface TMRenderer {
     getContainer(): HTMLDivElement;
 
-    getPositionForCursor(mouseX: number, mouseY: number): TMCharacterPosition;
+    getPositionForCursor(mouseX: number, mouseY: number): number;
 
     measure(data: TMTextData): TMTextMetrics;
 

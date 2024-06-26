@@ -1,6 +1,5 @@
 import {
     Rect,
-    TMCharacterPosition,
     TMRenderer as IRenderer,
     TMSelectRange,
     TMTextData,
@@ -29,7 +28,7 @@ export class TMRenderer implements IRenderer {
         return this._container;
     }
 
-    getPositionForCursor(mouseX: number, mouseY: number): TMCharacterPosition {
+    getPositionForCursor(mouseX: number, mouseY: number): number {
         let indexOfFullText = 0;
         for (let i = 0; i < this._textMetrics.rows.length; i++) {
             const currentRow = this._textMetrics.rows[i];
@@ -41,26 +40,17 @@ export class TMRenderer implements IRenderer {
                 const bound = currentRow.fragments[j].bound;
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     const indexOfRow = mouseX < bound.x + bound.width / 2 ? j - 1 : j;
-                    return {
-                        whichRow: i,
-                        indexOfRow,
-                        indexOfFullText: indexOfFullText + indexOfRow,
-                    };
+                    return indexOfFullText + indexOfRow;
                 }
             }
-            return {
-                whichRow: i,
-                indexOfRow: currentRow.fragments.length - 1,
-                indexOfFullText: indexOfFullText + currentRow.fragments.length - 1,
-            };
+            return Math.max(
+                -1,
+                indexOfFullText +
+                    currentRow.fragments.length -
+                    (currentRow.fragments[currentRow.fragments.length - 1].content === '\n' ? 2 : 1)
+            );
         }
-        const whichRow = Math.max(0, this._textMetrics.rows.length - 1);
-        const indexOfRow =
-            this._textMetrics.rows.length > 0
-                ? this._textMetrics.rows[this._textMetrics.rows.length - 1].fragments.length - 1
-                : -1;
-        indexOfFullText = this._textMetrics.characterBounds.length - 1;
-        return { whichRow, indexOfRow, indexOfFullText };
+        return this._textMetrics.characterBounds.length - 1;
     }
 
     measure(data: TMTextData) {
@@ -219,6 +209,7 @@ export class TMRenderer implements IRenderer {
             let renderWidth = 0;
             row.fragments.forEach((item) => {
                 if (item.content === '\n') {
+                    renderIndex++;
                     return;
                 }
                 ctx.save();
