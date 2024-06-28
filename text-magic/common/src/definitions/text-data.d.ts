@@ -9,9 +9,7 @@ export interface TMTextRow {
     y: number;
     width: number;
     height: number;
-    originHeight: number;
-    fontDescent: number;
-    fragments: (TMTextFragment & { font: string; bound: Rect })[];
+    characterBounds: Rect[];
 }
 
 export interface TMTextFragment {
@@ -32,5 +30,5 @@ export interface TMTextMetrics {
     width: number;
     height: number;
     rows: TMTextRow[];
-    characterBounds: (Rect & { rowIndex: number })[];
+    characterBounds: Rect[];
 }

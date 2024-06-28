@@ -1,3 +1,4 @@
+import { TMFontInfo, TMTextStyle } from '@text-magic/common';
 import { TMInput } from '@text-magic/input';
 import { TMRenderer } from '@text-magic/renderer';
 
@@ -8,7 +9,14 @@ export class MagicInput {
     constructor() {
         this._renderer = new TMRenderer();
         this._input = new TMInput();
-        this._input.bindRenderer(this._renderer);
+    }
+
+    async init(): Promise<boolean> {
+        return await this._input.init(this._renderer);
+    }
+
+    registerFont(font: TMFontInfo) {
+        return this._renderer.registerFont(font);
     }
 
     focus() {
@@ -17,6 +25,10 @@ export class MagicInput {
 
     blur() {
         this._input.blur();
+    }
+
+    applyStyle(style: Partial<TMTextStyle>) {
+        this._input.applyStyle(style);
     }
 
     get element() {

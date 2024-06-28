@@ -6,6 +6,7 @@ import {
     TMSelectRange,
     TMTextData,
     TMTextMetrics,
+    TMTextStyle,
 } from '@text-magic/common';
 import { throttle } from 'lodash';
 
@@ -18,6 +19,7 @@ export class TMInput implements IInput {
     private _renderer: TMRenderer | null = null;
     private _cursorPosition = -1;
     private _selectRange: TMSelectRange;
+    private _rangeCanvas: HTMLCanvasElement;
     private _renderRange: any = null;
     private _blinkTimer = Number.NaN;
 
@@ -27,8 +29,6 @@ export class TMInput implements IInput {
     private _devicePixelRatioListener: any;
     private _defaultOptions: TMInputOptions;
 
-    private _listeners: Record<string, any> = {};
-
     constructor(options?: TMInputOptions) {
         this._defaultOptions = options || {
             fontSize: 16,
@@ -36,6 +36,7 @@ export class TMInput implements IInput {
             fontFamily: 'Yahei',
             width: 260,
             height: 200,
+            controlFocusBlur: false,
         };
 
         this._textData = {
@@ -60,22 +61,24 @@ export class TMInput implements IInput {
         });
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
 
-        document.addEventListener('mousedown', (event) => {
-            if (!this._renderer) {
-                return;
-            }
-            const bound = this._renderer.getContainer().getBoundingClientRect();
-            if (
-                event.clientX >= bound.x &&
-                event.clientX <= bound.x + bound.width &&
-                event.clientY >= bound.y &&
-                event.clientY <= bound.y + bound.height
-            ) {
-                this.focus();
-            } else {
-                this.blur();
-            }
-        });
+        if (this._defaultOptions.controlFocusBlur) {
+            document.addEventListener('mousedown', (event) => {
+                if (!this._renderer) {
+                    return;
+                }
+                const bound = this._renderer.getContainer().getBoundingClientRect();
+                if (
+                    event.clientX >= bound.x &&
+                    event.clientX <= bound.x + bound.width &&
+                    event.clientY >= bound.y &&
+                    event.clientY <= bound.y + bound.height
+                ) {
+                    this.focus();
+                } else {
+                    this.blur();
+                }
+            });
+        }
 
         this._cursor = document.createElement('div');
         this._cursor.style.position = 'absolute';
@@ -85,10 +88,16 @@ export class TMInput implements IInput {
         this._media = window!.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
         this._devicePixelRatioListener = this._handleDevicePixelRatioChanged.bind(this);
         this._media.addEventListener('change', this._devicePixelRatioListener);
+
+        this._rangeCanvas = document.createElement('canvas');
+        this._rangeCanvas.style.position = 'absolute';
+        this._rangeCanvas.style.left = '0px';
     }
 
-    bindRenderer(renderer: TMRenderer) {
+    async init(renderer: TMRenderer): Promise<boolean> {
         this._renderer = renderer;
+
+        const result = await this._renderer.init();
 
         this._renderer
             .getContainer()
@@ -101,6 +110,26 @@ export class TMInput implements IInput {
         this._renderer.getContainer().appendChild(this._textArea);
 
         this._renderer.getContainer().appendChild(this._cursor);
+
+        this._renderer.getContainer().appendChild(this._rangeCanvas);
+
+        return result;
+    }
+
+    applyStyle(style: Partial<TMTextStyle>) {
+        if (this._selectRange.start !== this._selectRange.end) {
+            const start = Math.min(this._selectRange.start, this._selectRange.end);
+            const end = Math.max(this._selectRange.start, this._selectRange.end);
+            this._textData.fragments.slice(start + 1, end + 1).forEach((item) => {
+                if (item.content !== '\n') {
+                    Object.assign(item, style);
+                }
+            });
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.render();
+            this._showCursor();
+        } else if (this._cursor.style.display === 'none') {
+        }
     }
 
     focus() {
@@ -184,7 +213,29 @@ export class TMInput implements IInput {
                         this._selectRange.end = positionIndex;
                         if (Math.abs(this._selectRange.end - this._selectRange.start) > 0) {
                             this._hideCursor();
-                            this.renderer.render(this._selectRange);
+
+                            this._rangeCanvas.width = this.textMetrics.width;
+                            this._rangeCanvas.height = this.textMetrics.height;
+                            const ctx = this._rangeCanvas.getContext('2d')!;
+                            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
+                            const selectStart = Math.min(
+                                this._selectRange.start,
+                                this._selectRange.end
+                            );
+                            const selectEnd = Math.max(
+                                this._selectRange.start,
+                                this._selectRange.end
+                            );
+                            this.textMetrics.characterBounds.forEach((item, index) => {
+                                if (index > selectStart && index <= selectEnd) {
+                                    ctx.save();
+                                    ctx.beginPath();
+                                    ctx.globalAlpha = this._selectRange!.opacity;
+                                    ctx.fillStyle = this._selectRange!.color;
+                                    ctx.fillRect(item.x, item.y, item.width, item.height);
+                                    ctx.restore();
+                                }
+                            });
                         }
                     }
                 },
@@ -205,9 +256,6 @@ export class TMInput implements IInput {
             e.preventDefault();
         } else if (e.code === 'Backspace') {
             this._delete();
-            e.preventDefault();
-        } else if (e.code === 'Tab') {
-            this._tab();
             e.preventDefault();
         }
     }
@@ -246,8 +294,6 @@ export class TMInput implements IInput {
         }
     }
 
-    private _tab() {}
-
     private _showCursor() {
         this._hideSelectRange();
         clearTimeout(this._blinkTimer);
@@ -258,17 +304,11 @@ export class TMInput implements IInput {
             height: this._defaultOptions.fontSize * this.devicePixelRatio,
         };
         if (this._cursorPosition >= 0) {
-            const fragment = this._textData.fragments[this._cursorPosition];
-            const bounds = this.textMetrics.characterBounds[this._cursorPosition];
-            if (fragment.content === '\n') {
-                const nextRow = this.textMetrics.rows[bounds.rowIndex + 1];
-                textInfo.y = nextRow.y;
-                textInfo.height = nextRow.height;
-            } else {
-                textInfo.x = bounds.x + bounds.width;
-                textInfo.y = bounds.y;
-                textInfo.height = this.textMetrics.rows[bounds.rowIndex].height;
-            }
+            const bound = this.textMetrics.characterBounds[this._cursorPosition];
+            textInfo.x = bound.x;
+            textInfo.y = bound.y;
+            textInfo.width = bound.width;
+            textInfo.height = bound.height;
         }
 
         this._cursor.style.left = `${(textInfo.x + textInfo.width) / this.devicePixelRatio}px`;
@@ -292,7 +332,8 @@ export class TMInput implements IInput {
         if (this._selectRange.start !== -1 || this._selectRange.end !== -1) {
             this._selectRange.start === -1;
             this._selectRange.end === -1;
-            this.renderer.render();
+            const ctx = this._rangeCanvas.getContext('2d')!;
+            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
         }
     }
 

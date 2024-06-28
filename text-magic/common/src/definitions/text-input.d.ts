@@ -6,10 +6,20 @@ export interface TMInputOptions {
     fontSize: number;
     fontColor: string;
     fontFamily: string;
+    controlFocusBlur: boolean;
+}
+
+export interface TMTextStyle {
+    fontSize: number;
+    fontColor: string;
+    fontFamily: string;
+    fontStyle: string;
 }
 
 export interface TMInput {
-    bindRenderer(renderer: TMRenderer);
+    init(renderer: TMRenderer): Promise<boolean>;
+
+    applyStyle(style: Partial<TMTextStyle>);
 
     destroy();
 }

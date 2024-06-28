@@ -3,6 +3,10 @@
         <div class="input-container" ref="root"></div>
 
         <div class="input-group">
+            <button @click="blurInput">Make Input Blur</button>
+        </div>
+
+        <div class="input-group">
             <label for="fontSize">Font Size (px): </label>
             <input
                 v-model.number="fontSize"
@@ -50,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { getDefaultFont } from '@text-magic/renderer';
 import { MagicInput } from 'text-magic-input';
 import { onMounted, Ref, ref, watch } from 'vue';
 
@@ -71,16 +76,47 @@ function disableScroll() {
 
 watch(
     () => fontSize.value,
-    () => {}
+    () => {
+        applyStyle();
+    }
 );
 
 watch(
     () => [fontColorR.value, fontColorG.value, fontColorB.value],
-    () => {}
+    () => {
+        applyStyle();
+    }
 );
+function rgbToHex(r: number, g: number, b: number): string {
+    return (
+        '#' +
+        [r, g, b]
+            .map((x) => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? `0${hex}` : hex;
+            })
+            .join('')
+    );
+}
 
-onMounted(() => {
+function blurInput() {
+    input.blur();
+}
+
+function applyStyle() {
+    input.applyStyle({
+        fontSize: fontSize.value,
+        fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
+    });
+}
+
+onMounted(async () => {
     disableScroll();
+
+    await input.init();
+
+    const defaultFontBuffer = await getDefaultFont();
+    input.registerFont({ data: defaultFontBuffer, family: 'Roboto' });
 
     root.value!.appendChild(input.element);
     input.focus();
