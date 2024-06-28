@@ -25,7 +25,10 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@text-magic/common": "workspace:*"
+        "@text-magic/common": "workspace:*",
+        "uuid": "^10.0.0"
     },
-    "devDependencies": {}
+    "devDependencies": {
+        "@types/uuid": "^10.0.0"
+    }
 }

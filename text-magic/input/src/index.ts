@@ -1,17 +1,19 @@
 import {
-    Rect,
     TMInput as IInput,
     TMInputOptions,
     TMRenderer,
     TMSelectRange,
     TMTextData,
+    TMTextFragment,
     TMTextMetrics,
     TMTextStyle,
 } from '@text-magic/common';
 import { throttle } from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
 
 export class TMInput implements IInput {
     private _textData: TMTextData;
+    private _fragmentMap: Map<string, TMTextFragment> = new Map();
     private _textMetrics: TMTextMetrics | null = null;
     private _textArea: HTMLTextAreaElement;
     private _cursor: HTMLDivElement;
@@ -36,7 +38,7 @@ export class TMInput implements IInput {
             fontFamily: 'Yahei',
             width: 260,
             height: 200,
-            controlFocusBlur: false,
+            autoBlur: false,
         };
 
         this._textData = {
@@ -61,7 +63,7 @@ export class TMInput implements IInput {
         });
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
 
-        if (this._defaultOptions.controlFocusBlur) {
+        if (this._defaultOptions.autoBlur) {
             document.addEventListener('mousedown', (event) => {
                 if (!this._renderer) {
                     return;
@@ -154,31 +156,42 @@ export class TMInput implements IInput {
         }
     }
 
+    private _insertToContent(str: string, index: number, char: string): string {
+        if (index > str.length) {
+            return str + char;
+        }
+        return str.slice(0, index) + char + str.slice(index);
+    }
+
     private _handleInput(e: InputEvent) {
         setTimeout(() => {
             const data = e.data;
             if (!data || this._isCompositing) {
                 return;
             }
-            const arr = data.split('');
-            const length = arr.length;
-            const cur = this._textData.fragments[this._cursorPosition];
-            this._textData.fragments.splice(
-                this._cursorPosition + 1,
-                0,
-                ...arr.map((item) => {
-                    return {
-                        ...(cur || {}),
-                        content: item,
-                        fontSize: this._defaultOptions.fontSize,
-                        color: this._defaultOptions.fontColor,
-                        fontFamily: this._defaultOptions.fontFamily,
-                    };
-                })
-            );
+            if (this._textData.fragments.length === 0) {
+                const fragment = {
+                    id: uuidv4(),
+                    content: data,
+                    color: this._defaultOptions.fontColor,
+                    fontSize: this._defaultOptions.fontSize,
+                    fontFamily: this._defaultOptions.fontFamily,
+                    fontStyle: '',
+                };
+                this._fragmentMap.set(fragment.id, fragment);
+                this._textData.fragments.push(fragment);
+            } else {
+                const cm = this.textMetrics.characterMetrics[this._cursorPosition];
+                const curFragment = this._fragmentMap.get(cm.fragmentId)!;
+                curFragment.content = this._insertToContent(
+                    curFragment.content,
+                    cm.indexOfFragment + 1,
+                    data
+                );
+            }
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
-            this._cursorPosition += length;
+            this._cursorPosition += data.length;
             this._showCursor();
         }, 0);
     }
@@ -226,7 +239,7 @@ export class TMInput implements IInput {
                                 this._selectRange.start,
                                 this._selectRange.end
                             );
-                            this.textMetrics.characterBounds.forEach((item, index) => {
+                            this.textMetrics.characterMetrics.forEach((item, index) => {
                                 if (index > selectStart && index <= selectEnd) {
                                     ctx.save();
                                     ctx.beginPath();
@@ -261,17 +274,17 @@ export class TMInput implements IInput {
     }
 
     private _newLine() {
-        this._textData.fragments.splice(this._cursorPosition + 1, 0, {
-            content: '\n',
-            fontSize: this._defaultOptions.fontSize,
-            color: '',
-            fontFamily: '',
-            fontStyle: '',
-        });
-        this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render();
-        this._cursorPosition++;
-        this._showCursor();
+        // this._textData.fragments.push({
+        //     content: '\n',
+        //     fontSize: this._defaultOptions.fontSize,
+        //     color: '',
+        //     fontFamily: '',
+        //     fontStyle: '',
+        // });
+        // this._textMetrics = this.renderer.measure(this._textData);
+        // this.renderer.render();
+        // this._cursorPosition++;
+        // this._showCursor();
     }
 
     private _delete() {
@@ -304,7 +317,7 @@ export class TMInput implements IInput {
             height: this._defaultOptions.fontSize * this.devicePixelRatio,
         };
         if (this._cursorPosition >= 0) {
-            const bound = this.textMetrics.characterBounds[this._cursorPosition];
+            const bound = this.textMetrics.characterMetrics[this._cursorPosition];
             textInfo.x = bound.x;
             textInfo.y = bound.y;
             textInfo.width = bound.width;

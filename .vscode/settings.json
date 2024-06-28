@@ -95,5 +95,5 @@
     ],
 
     "vue.complete.casing.props": "autoCamel",
-    "cSpell.words": []
+    "cSpell.words": ["compositionend", "compositionstart", "dppx", "uuidv"]
 }

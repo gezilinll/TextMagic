@@ -1,18 +1,27 @@
-export interface Rect {
+export interface TMCharacterMetrics {
     x: number;
     y: number;
     width: number;
     height: number;
+    fragmentId: string;
+    indexOfFragment: number;
 }
 
+export interface TMTextMetrics {
+    width: number;
+    height: number;
+    rows: TMTextRow[];
+    characterMetrics: TMCharacterMetrics[];
+}
 export interface TMTextRow {
     y: number;
     width: number;
     height: number;
-    characterBounds: Rect[];
+    characterMetrics: TMCharacterMetrics[];
 }
 
 export interface TMTextFragment {
+    id: string;
     content: string;
     color: string;
     fontSize: number;
@@ -24,11 +33,4 @@ export interface TMTextData {
     width: number;
     height: number;
     fragments: TMTextFragment[];
-}
-
-export interface TMTextMetrics {
-    width: number;
-    height: number;
-    rows: TMTextRow[];
-    characterBounds: Rect[];
 }

@@ -1,5 +1,5 @@
 import {
-    Rect,
+    TMCharacterMetrics,
     TMFontInfo,
     TMRenderer as IRenderer,
     TMTextData,
@@ -23,7 +23,7 @@ export class TMRenderer implements IRenderer {
     private _paragraph: Paragraph | null = null;
 
     constructor() {
-        this._textMetrics = { width: 0, height: 0, rows: [], characterBounds: [] };
+        this._textMetrics = { width: 0, height: 0, rows: [], characterMetrics: [] };
 
         this._container = document.createElement('div');
 
@@ -54,11 +54,11 @@ export class TMRenderer implements IRenderer {
         for (let i = 0; i < this._textMetrics.rows.length; i++) {
             const currentRow = this._textMetrics.rows[i];
             if (mouseY < currentRow.y || mouseY > currentRow.y + currentRow.height) {
-                indexOfFullText += currentRow.characterBounds.length;
+                indexOfFullText += currentRow.characterMetrics.length;
                 continue;
             }
-            for (let j = 0; j < currentRow.characterBounds.length; j++) {
-                const bound = currentRow.characterBounds[j];
+            for (let j = 0; j < currentRow.characterMetrics.length; j++) {
+                const bound = currentRow.characterMetrics[j];
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     const indexOfRow = mouseX < bound.x + bound.width / 2 ? j - 1 : j;
                     return indexOfFullText + indexOfRow;
@@ -67,59 +67,71 @@ export class TMRenderer implements IRenderer {
             return Math.max(
                 -1,
                 indexOfFullText +
-                    currentRow.characterBounds.length -
-                    (currentRow.characterBounds[currentRow.characterBounds.length - 1].width >= 0
+                    currentRow.characterMetrics.length -
+                    (currentRow.characterMetrics[currentRow.characterMetrics.length - 1].width >= 0
                         ? 1
                         : 2)
             );
         }
-        return this._textMetrics.characterBounds.length - 1;
+        return this._textMetrics.characterMetrics.length - 1;
     }
 
     measure(data: TMTextData) {
         const CanvasKit = this.CanvasKit!;
-        const paraStyle = new CanvasKit.ParagraphStyle({
-            textStyle: {
-                color: CanvasKit.BLACK,
-                fontFamilies: ['Roboto'],
-                fontSize: 28,
-            },
-            textAlign: CanvasKit.TextAlign.Left,
-        });
-        const builder = CanvasKit.ParagraphBuilder.MakeFromFontProvider(paraStyle, this.FontMgr!);
-        builder.addText('askweg\n');
-        this._paragraph = builder.build();
-        this._paragraph.layout(data.width);
-        const shapedLines = this._paragraph.getShapedLines();
-        const lineMetrics = this._paragraph.getLineMetrics();
         const rows: TMTextRow[] = [];
-        const characterBounds: Rect[] = [];
-        shapedLines.forEach((line, index) => {
-            rows.push({
-                y: line.top,
-                width: lineMetrics[index].width,
-                height: lineMetrics[index].height,
-                characterBounds: [],
+        const characterBounds: TMCharacterMetrics[] = [];
+        data.fragments.forEach((fragment) => {
+            const paraStyle = new CanvasKit.ParagraphStyle({
+                textStyle: {
+                    color: CanvasKit.BLACK,
+                    fontFamilies: ['Roboto'],
+                    fontSize: 28,
+                },
+                textAlign: CanvasKit.TextAlign.Left,
             });
-            const currentRow = rows[rows.length - 1];
-            line.runs.forEach((item) => {
-                for (let i = 0; i < item.positions.length - 1; i++) {
-                    if (i % 2 !== 0) {
-                        continue;
+            const builder = CanvasKit.ParagraphBuilder.MakeFromFontProvider(
+                paraStyle,
+                this.FontMgr!
+            );
+            builder.addText(fragment.content);
+            this._paragraph = builder.build();
+            this._paragraph.layout(data.width);
+            const shapedLines = this._paragraph.getShapedLines();
+            const lineMetrics = this._paragraph.getLineMetrics();
+            shapedLines.forEach((line, index) => {
+                rows.push({
+                    y: line.top,
+                    width: lineMetrics[index].width,
+                    height: lineMetrics[index].height,
+                    characterMetrics: [],
+                });
+                const currentRow = rows[rows.length - 1];
+                line.runs.forEach((item) => {
+                    for (let i = 0; i < item.positions.length - 1; i++) {
+                        if (i % 2 !== 0) {
+                            continue;
+                        }
+                        const bound: TMCharacterMetrics = {
+                            x: item.positions[i],
+                            y: line.top,
+                            width: item.positions[i + 2] - item.positions[i],
+                            height: lineMetrics[index].height,
+                            fragmentId: fragment.id,
+                            indexOfFragment: currentRow.characterMetrics.length,
+                        };
+                        currentRow.characterMetrics.push(bound);
+                        characterBounds.push(bound);
                     }
-                    const bound = {
-                        x: item.positions[i],
-                        y: line.top,
-                        width: item.positions[i + 2] - item.positions[i],
-                        height: lineMetrics[index].height,
-                    };
-                    currentRow.characterBounds.push(bound);
-                    characterBounds.push(bound);
-                }
+                });
             });
         });
 
-        this._textMetrics = { width: data.width, height: data.height, rows, characterBounds };
+        this._textMetrics = {
+            width: data.width,
+            height: data.height,
+            rows,
+            characterMetrics: characterBounds,
+        };
         return this._textMetrics;
     }
 

@@ -6,7 +6,14 @@ export interface TMInputOptions {
     fontSize: number;
     fontColor: string;
     fontFamily: string;
-    controlFocusBlur: boolean;
+    autoBlur: boolean;
+}
+
+export interface TMSelectRange {
+    start: number;
+    end: number;
+    color: string;
+    opacity: number;
 }
 
 export interface TMTextStyle {
