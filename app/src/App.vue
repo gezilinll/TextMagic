@@ -50,50 +50,58 @@
                 max="255"
             />
         </div>
+        <div class="input-group">
+            <label>Font Style: </label>
+            <br />
+            <button @click="applyStyle({ fontStyle: 'normal' })">normal</button>
+            <button @click="applyStyle({ fontStyle: 'italic' })">italic</button>
+        </div>
+        <div class="input-group">
+            <label>Font Weight: </label>
+            <br />
+            <button @click="applyStyle({ fontWeight: 'normal' })">normal</button>
+            <button @click="applyStyle({ fontWeight: 'bold' })">bold</button>
+            <button @click="applyStyle({ fontWeight: 'lighter' })">lighter</button>
+            <button @click="applyStyle({ fontWeight: 'bolder' })">bolder</button>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { TMTextStyle } from '@text-magic/common';
 import { getDefaultFont } from '@text-magic/renderer';
 import { MagicInput } from 'text-magic-input';
 import { onMounted, Ref, ref, watch } from 'vue';
 
-const root: Ref<HTMLDivElement | null> = ref(null);
 const fontSize = ref(36);
+watch(
+    () => fontSize.value,
+    () => {
+        applyStyle({ fontSize: fontSize.value });
+    }
+);
+
 const fontColorR = ref(0);
 const fontColorG = ref(0);
 const fontColorB = ref(0);
-
-const input = new MagicInput({
-    width: 280,
-    height: 200,
-    fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
-    fontSize: fontSize.value,
-    fontFamily: 'Roboto',
-    autoBlur: false,
-});
+watch(
+    () => [fontColorR.value, fontColorG.value, fontColorB.value],
+    () => {
+        applyStyle({ color: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value) });
+    }
+);
 
 function preventDefault(e: Event) {
     e.preventDefault();
 }
-
 function disableScroll() {
     document.addEventListener('wheel', preventDefault, { passive: false });
 }
 
-watch(
-    () => fontSize.value,
-    () => {
-        applyStyle();
-    }
-);
+function blurInput() {
+    input.blur();
+}
 
-watch(
-    () => [fontColorR.value, fontColorG.value, fontColorB.value],
-    () => {
-        applyStyle();
-    }
-);
 function rgbToHex(r: number, g: number, b: number): string {
     return (
         '#' +
@@ -106,18 +114,19 @@ function rgbToHex(r: number, g: number, b: number): string {
     );
 }
 
-function blurInput() {
-    input.blur();
+function applyStyle(style: Partial<TMTextStyle>) {
+    input.applyStyle(style);
 }
 
-function applyStyle() {
-    input.applyStyle({
-        fontSize: fontSize.value,
-        color: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
-        fontFamily: 'Roboto',
-        fontStyle: '',
-    });
-}
+const root: Ref<HTMLDivElement | null> = ref(null);
+const input = new MagicInput({
+    width: 280,
+    height: 200,
+    fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
+    fontSize: fontSize.value,
+    fontFamily: 'Roboto',
+    autoBlur: false,
+});
 
 onMounted(async () => {
     disableScroll();
@@ -152,8 +161,8 @@ body {
 
 .input-container {
     position: absolute;
-    left: 200px;
-    right: 200px;
+    left: 280px;
+    right: 280px;
     top: 16px;
     bottom: 16px;
     overflow: hidden;

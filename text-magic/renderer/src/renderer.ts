@@ -44,6 +44,45 @@ export class TMRenderer implements IRenderer {
         return this._container;
     }
 
+    private _convertFontStyle(fontStyle: string, fontWeight: string) {
+        const CanvasKit = this.CanvasKit!;
+
+        let weight;
+        switch (fontWeight.toLowerCase()) {
+            case 'normal':
+                weight = CanvasKit.FontWeight.Normal;
+                break;
+            case 'bold':
+                weight = CanvasKit.FontWeight.Bold;
+                break;
+            case 'lighter':
+                weight = CanvasKit.FontWeight.Light;
+                break;
+            case 'bolder':
+                weight = CanvasKit.FontWeight.ExtraBold;
+                break;
+            default:
+                weight = CanvasKit.FontWeight.Normal;
+        }
+
+        let slant;
+        switch (fontStyle.toLowerCase()) {
+            case 'normal':
+                slant = CanvasKit.FontSlant.Upright;
+                break;
+            case 'italic':
+                slant = CanvasKit.FontSlant.Italic;
+                break;
+            case 'oblique':
+                slant = CanvasKit.FontSlant.Oblique;
+                break;
+            default:
+                slant = CanvasKit.FontSlant.Upright;
+        }
+
+        return { weight, slant, width: CanvasKit.FontWidth.Normal };
+    }
+
     measure(data: TMTextData) {
         const CanvasKit = this.CanvasKit!;
         const characterBounds: TMCharacterMetrics[] = [];
@@ -52,6 +91,7 @@ export class TMRenderer implements IRenderer {
                 color: CanvasKit.parseColorString(data.style.color),
                 fontFamilies: [data.style.fontFamily],
                 fontSize: data.style.fontSize,
+                fontStyle: this._convertFontStyle(data.style.fontStyle, data.style.fontWeight),
             },
             textAlign: CanvasKit.TextAlign.Left,
         });

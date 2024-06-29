@@ -16,7 +16,8 @@ export interface TMTextStyle {
     color: string;
     fontSize: number;
     fontFamily: string;
-    fontStyle: string;
+    fontStyle: 'normal' | 'italic';
+    fontWeight: 'normal' | 'bold' | 'lighter' | 'bolder';
 }
 
 export interface TMTextData {

@@ -49,7 +49,8 @@ export class TMInput implements IInput {
                 color: '#000000',
                 fontSize: this._defaultOptions.fontSize,
                 fontFamily: this._defaultOptions.fontFamily,
-                fontStyle: '',
+                fontStyle: 'normal',
+                fontWeight: 'normal',
             },
         };
 
