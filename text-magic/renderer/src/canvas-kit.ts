@@ -1,3 +1,4 @@
+import { TMFontInfo } from '@text-magic/common';
 import CanvasKitInit from 'canvaskit-wasm';
 import { CanvasKit } from 'canvaskit-wasm';
 
@@ -14,12 +15,12 @@ export async function getCanvasKit() {
     return CANVAS_KIT;
 }
 
-export async function getDefaultFont() {
+export async function getDefaultFont(): Promise<TMFontInfo> {
     if (DEFAULT_FONT) {
-        return DEFAULT_FONT;
+        return { data: DEFAULT_FONT, family: 'Roboto' };
     }
     DEFAULT_FONT = await fetch(
         'https://storage.googleapis.com/skia-cdn/misc/Roboto-Regular.ttf'
     ).then((response) => response.arrayBuffer());
-    return DEFAULT_FONT!;
+    return { data: DEFAULT_FONT!, family: 'Roboto' };
 }

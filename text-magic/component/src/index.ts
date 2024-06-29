@@ -1,4 +1,4 @@
-import { TMFontInfo, TMTextStyle } from '@text-magic/common';
+import { TMFontInfo, TMInputOptions, TMTextStyle } from '@text-magic/common';
 import { TMInput } from '@text-magic/input';
 import { TMRenderer } from '@text-magic/renderer';
 
@@ -6,9 +6,9 @@ export class MagicInput {
     private _input: TMInput;
     private _renderer: TMRenderer;
 
-    constructor() {
+    constructor(options?: TMInputOptions) {
         this._renderer = new TMRenderer();
-        this._input = new TMInput();
+        this._input = new TMInput(options);
     }
 
     async init(): Promise<boolean> {

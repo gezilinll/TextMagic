@@ -9,6 +9,7 @@ import {
     TMTextStyle,
 } from '@text-magic/common';
 import { clone, throttle } from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
 
 export class TMInput implements IInput {
     private _textData: TMTextData;
@@ -43,6 +44,13 @@ export class TMInput implements IInput {
             width: this._defaultOptions.width,
             height: this._defaultOptions.height,
             content: '',
+            style: {
+                id: uuidv4(),
+                color: '#000000',
+                fontSize: this._defaultOptions.fontSize,
+                fontFamily: this._defaultOptions.fontFamily,
+                fontStyle: '',
+            },
         };
 
         this._selectRange = {
@@ -323,7 +331,13 @@ export class TMInput implements IInput {
         this._isMouseDown = false;
     }
 
-    applyStyle(style: Partial<TMTextStyle>) {}
+    applyStyle(style: Partial<TMTextStyle>) {
+        Object.assign(this._textData.style, style);
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render();
+        this._hideSelectRange();
+        this._showCursor();
+    }
 
     private _handleDevicePixelRatioChanged() {
         if (this._renderer && this._renderer.isUseDevicePixelRatio()) {

@@ -59,12 +59,19 @@ import { MagicInput } from 'text-magic-input';
 import { onMounted, Ref, ref, watch } from 'vue';
 
 const root: Ref<HTMLDivElement | null> = ref(null);
-const fontSize = ref(16);
+const fontSize = ref(36);
 const fontColorR = ref(0);
 const fontColorG = ref(0);
 const fontColorB = ref(0);
 
-const input = new MagicInput();
+const input = new MagicInput({
+    width: 280,
+    height: 200,
+    fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
+    fontSize: fontSize.value,
+    fontFamily: 'Roboto',
+    autoBlur: false,
+});
 
 function preventDefault(e: Event) {
     e.preventDefault();
@@ -106,7 +113,9 @@ function blurInput() {
 function applyStyle() {
     input.applyStyle({
         fontSize: fontSize.value,
-        fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
+        color: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
+        fontFamily: 'Roboto',
+        fontStyle: '',
     });
 }
 
@@ -115,8 +124,8 @@ onMounted(async () => {
 
     await input.init();
 
-    const defaultFontBuffer = await getDefaultFont();
-    input.registerFont({ data: defaultFontBuffer, family: 'Roboto' });
+    const defaultFont = await getDefaultFont();
+    input.registerFont(defaultFont);
 
     root.value!.appendChild(input.element);
     input.focus();

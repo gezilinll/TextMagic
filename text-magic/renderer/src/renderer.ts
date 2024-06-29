@@ -49,9 +49,9 @@ export class TMRenderer implements IRenderer {
         const characterBounds: TMCharacterMetrics[] = [];
         const paraStyle = new CanvasKit.ParagraphStyle({
             textStyle: {
-                color: CanvasKit.BLACK,
-                fontFamilies: ['Roboto'],
-                fontSize: 28,
+                color: CanvasKit.parseColorString(data.style.color),
+                fontFamilies: [data.style.fontFamily],
+                fontSize: data.style.fontSize,
             },
             textAlign: CanvasKit.TextAlign.Left,
         });

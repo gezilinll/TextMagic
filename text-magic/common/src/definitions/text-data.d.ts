@@ -11,8 +11,17 @@ export interface TMCharacterMetrics {
     isNewLine: boolean;
 }
 
+export interface TMTextStyle {
+    id: string;
+    color: string;
+    fontSize: number;
+    fontFamily: string;
+    fontStyle: string;
+}
+
 export interface TMTextData {
     width: number;
     height: number;
     content: string;
+    style: TMTextStyle;
 }
