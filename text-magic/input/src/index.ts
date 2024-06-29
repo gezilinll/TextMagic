@@ -183,7 +183,7 @@ export class TMInput implements IInput {
         this._showCursor();
     }
 
-    private _getCursorPosition() {
+    private _getCursorPosition(): { x: number; y: number; height: number } {
         if (
             this._textMetrics.allCharacter.length === 0 ||
             (this._cursorInfo.characterIndex < 0 && this._cursorInfo.position === 'before')
@@ -282,8 +282,10 @@ export class TMInput implements IInput {
                     const targetRange = this._getSelectRange();
                     if (targetRange.end - targetRange.start > 0) {
                         this._hideCursor();
-                        this._rangeCanvas.width = this._textMetrics.width;
-                        this._rangeCanvas.height = this._textMetrics.height;
+                        this._rangeCanvas.width = this._textMetrics.width * this.devicePixelRatio;
+                        this._rangeCanvas.height = this._textMetrics.height * this.devicePixelRatio;
+                        this._rangeCanvas.style.width = `${this._textMetrics.width}px`;
+                        this._rangeCanvas.style.height = `${this._textMetrics.height}px`;
                         const ctx = this._rangeCanvas.getContext('2d')!;
                         ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
                         this._textMetrics.allCharacter.forEach((item, index) => {

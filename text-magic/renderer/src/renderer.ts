@@ -71,8 +71,8 @@ export class TMRenderer implements IRenderer {
         }
 
         return {
-            width: data.width,
-            height: data.height,
+            width: this._paragraph.getMaxWidth(),
+            height: this._paragraph.getHeight(),
             allCharacter: characterBounds,
         };
     }
@@ -81,14 +81,23 @@ export class TMRenderer implements IRenderer {
         if (!this._paragraph) {
             return;
         }
+
         const CanvasKit = this.CanvasKit!;
+
+        this._canvasElement.width = this._paragraph.getMaxWidth() * window.devicePixelRatio;
+        this._canvasElement.height = this._paragraph.getHeight() * window.devicePixelRatio;
+        this._canvasElement.style.width = `${this._paragraph.getMaxWidth()}px`;
+        this._canvasElement.style.height = `${this._paragraph.getHeight()}px`;
+        this._surface = CanvasKit.MakeCanvasSurface(this._canvasElement)!;
+        this._canvas = this._surface.getCanvas();
+
         this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
         this.canvas.drawParagraph(this._paragraph, 0, 0);
         this.surface.flush();
     }
 
     isUseDevicePixelRatio(): boolean {
-        return false;
+        return true;
     }
 
     notifyDevicePixelRatioChanged() {
