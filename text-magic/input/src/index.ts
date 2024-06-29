@@ -197,7 +197,14 @@ export class TMInput implements IInput {
             const nextCharacter = this._textMetrics.allCharacter[0];
             return { x: 0, y: 0, height: nextCharacter.height };
         }
-        console.log('_getCursorPosition', this._cursorInfo, this._textMetrics);
+        if (
+            this._cursorInfo.characterIndex === this._textMetrics.allCharacter.length &&
+            this._cursorInfo.position === 'before'
+        ) {
+            this._cursorInfo.characterIndex = this._textMetrics.allCharacter.length - 1;
+            this._cursorInfo.position = 'after';
+            return this._getCursorPosition();
+        }
         const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
         if (character.isNewLine && this._cursorInfo.position === 'after') {
             return {
@@ -398,7 +405,6 @@ export class TMInput implements IInput {
             this._textData.content =
                 this._textData.content.slice(0, startIndex) +
                 this._textData.content.slice(startIndex + length);
-            console.log('_delete', startIndex, length, this._cursorInfo);
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
             this._hideSelectRange();
