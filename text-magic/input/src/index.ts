@@ -1,25 +1,23 @@
 import {
+    TMCursorInfo,
     TMInput as IInput,
     TMInputOptions,
     TMRenderer,
     TMSelectRange,
     TMTextData,
-    TMTextFragment,
     TMTextMetrics,
     TMTextStyle,
 } from '@text-magic/common';
-import { throttle } from 'lodash';
-import { v4 as uuidv4 } from 'uuid';
+import { clone, throttle } from 'lodash';
 
 export class TMInput implements IInput {
     private _textData: TMTextData;
-    private _fragmentMap: Map<string, TMTextFragment> = new Map();
-    private _textMetrics: TMTextMetrics | null = null;
+    private _textMetrics: TMTextMetrics;
     private _textArea: HTMLTextAreaElement;
     private _cursor: HTMLDivElement;
 
     private _renderer: TMRenderer | null = null;
-    private _cursorPosition = -1;
+    private _cursorInfo: TMCursorInfo;
     private _selectRange: TMSelectRange;
     private _rangeCanvas: HTMLCanvasElement;
     private _renderRange: any = null;
@@ -44,10 +42,15 @@ export class TMInput implements IInput {
         this._textData = {
             width: this._defaultOptions.width,
             height: this._defaultOptions.height,
-            fragments: [],
+            content: '',
         };
 
-        this._selectRange = { start: -1, end: -1, color: '#0000FF', opacity: 0.2 };
+        this._selectRange = {
+            start: { characterIndex: -1, position: 'after' },
+            end: { characterIndex: -1, position: 'after' },
+            color: '#0000FF',
+            opacity: 0.2,
+        };
 
         this._textArea = document.createElement('textarea');
         this._textArea.style.position = 'fixed';
@@ -94,6 +97,9 @@ export class TMInput implements IInput {
         this._rangeCanvas = document.createElement('canvas');
         this._rangeCanvas.style.position = 'absolute';
         this._rangeCanvas.style.left = '0px';
+
+        this._textMetrics = { width: 0, height: 0, allCharacter: [] };
+        this._cursorInfo = this.getCursorByCoordinate(0, 0);
     }
 
     async init(renderer: TMRenderer): Promise<boolean> {
@@ -118,23 +124,8 @@ export class TMInput implements IInput {
         return result;
     }
 
-    applyStyle(style: Partial<TMTextStyle>) {
-        if (this._selectRange.start !== this._selectRange.end) {
-            const start = Math.min(this._selectRange.start, this._selectRange.end);
-            const end = Math.max(this._selectRange.start, this._selectRange.end);
-            this._textData.fragments.slice(start + 1, end + 1).forEach((item) => {
-                if (item.content !== '\n') {
-                    Object.assign(item, style);
-                }
-            });
-            this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
-            this._showCursor();
-        } else if (this._cursor.style.display === 'none') {
-        }
-    }
-
     focus() {
+        this._hideSelectRange();
         this._showCursor();
     }
 
@@ -147,65 +138,121 @@ export class TMInput implements IInput {
         this._media.removeEventListener('change', this._devicePixelRatioListener);
     }
 
-    private _handleDevicePixelRatioChanged() {
-        if (this._renderer && this._renderer.isUseDevicePixelRatio()) {
-            this._hideSelectRange();
-            this._hideCursor();
-            this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.notifyDevicePixelRatioChanged();
+    getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo {
+        if (this._textMetrics.allCharacter.length === 0) {
+            return {
+                characterIndex: -1,
+                position: 'after',
+            };
         }
-    }
-
-    private _insertToContent(str: string, index: number, char: string): string {
-        if (index > str.length) {
-            return str + char;
+        let result = -1;
+        for (let i = 0; i < this._textMetrics.allCharacter.length; i++) {
+            const bound = this._textMetrics.allCharacter[i];
+            if (mouseY >= bound.y && mouseY <= bound.y + bound.height) {
+                if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
+                    result = i;
+                    break;
+                } else if (i + 1 <= this._textMetrics.allCharacter.length - 1) {
+                    const nextBound = this._textMetrics.allCharacter[i + 1];
+                    if (nextBound.isNewLine || nextBound.y > bound.y) {
+                        result = i;
+                        break;
+                    }
+                }
+            }
         }
-        return str.slice(0, index) + char + str.slice(index);
-    }
-
-    private _handleInput(e: InputEvent) {
-        setTimeout(() => {
-            const data = e.data;
-            if (!data || this._isCompositing) {
-                return;
-            }
-            if (this._textData.fragments.length === 0) {
-                const fragment = {
-                    id: uuidv4(),
-                    content: data,
-                    color: this._defaultOptions.fontColor,
-                    fontSize: this._defaultOptions.fontSize,
-                    fontFamily: this._defaultOptions.fontFamily,
-                    fontStyle: '',
-                };
-                this._fragmentMap.set(fragment.id, fragment);
-                this._textData.fragments.push(fragment);
-            } else {
-                const cm = this.textMetrics.characterMetrics[this._cursorPosition];
-                const curFragment = this._fragmentMap.get(cm.fragmentId)!;
-                curFragment.content = this._insertToContent(
-                    curFragment.content,
-                    cm.indexOfFragment + 1,
-                    data
-                );
-            }
-            this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
-            this._cursorPosition += data.length;
-            this._showCursor();
-        }, 0);
+        if (result === -1) {
+            result = this._textMetrics.allCharacter.length - 1;
+        }
+        const targetBound = this._textMetrics.allCharacter[result];
+        return {
+            characterIndex: result,
+            position: mouseX < targetBound.x + targetBound.width / 2 ? 'before' : 'after',
+        };
     }
 
     private _handleMouseDown(e: MouseEvent) {
         this._isMouseDown = true;
 
-        this._cursorPosition = this.renderer.getPositionForCursor(
+        this._cursorInfo = this.getCursorByCoordinate(
             e.offsetX * this.devicePixelRatio,
             e.offsetY * this.devicePixelRatio
         );
-        this._selectRange.start = this._cursorPosition;
+        this._hideSelectRange();
         this.focus();
         this._showCursor();
+    }
+
+    private _getCursorPosition() {
+        if (
+            this._textMetrics.allCharacter.length === 0 ||
+            (this._cursorInfo.characterIndex < 0 && this._cursorInfo.position === 'before')
+        ) {
+            return { x: 0, y: 0, height: this._defaultOptions.fontSize };
+        }
+        if (
+            (this._cursorInfo.characterIndex === -1 && this._cursorInfo.position === 'after') ||
+            (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'before')
+        ) {
+            const nextCharacter = this._textMetrics.allCharacter[0];
+            return { x: 0, y: 0, height: nextCharacter.height };
+        }
+        console.log('_getCursorPosition', this._cursorInfo, this._textMetrics);
+        const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+        if (character.isNewLine && this._cursorInfo.position === 'after') {
+            return {
+                x: 0,
+                y: character.y + character.height,
+                height: character.height,
+            };
+        }
+        return {
+            x: character.x + (this._cursorInfo.position === 'after' ? character.width : 0),
+            y: character.y,
+            height: character.height,
+        };
+    }
+
+    private _showCursor() {
+        clearTimeout(this._blinkTimer);
+        const bound = this._getCursorPosition();
+
+        this._cursor.style.left = `${bound.x / this.devicePixelRatio}px`;
+        this._cursor.style.top = `${bound.y / this.devicePixelRatio}px`;
+        this._cursor.style.height = `${bound.height / this.devicePixelRatio}px`;
+        this._cursor.style.opacity = '1';
+        setTimeout(() => {
+            this._textArea.focus();
+            this._cursor.style.display = 'block';
+            this._blinkCursor(0);
+        }, 0);
+    }
+
+    private _blinkCursor(opacity: number) {
+        clearTimeout(this._blinkTimer);
+        this._blinkTimer = setTimeout(() => {
+            this._cursor.style.opacity = String(opacity);
+            this._blinkCursor(opacity === 0 ? 1 : 0);
+        }, 500);
+    }
+
+    private _hideCursor() {
+        clearTimeout(this._blinkTimer);
+        this._cursor.style.display = 'none';
+        this._cursorInfo.characterIndex = -1;
+    }
+
+    private _getSelectRange() {
+        if (this._selectRange.start.characterIndex === this._selectRange.end.characterIndex) {
+            return { start: -1, end: -1 };
+        }
+        const start =
+            this._selectRange.start.characterIndex +
+            (this._selectRange.start.position === 'after' ? 1 : 0);
+        const end =
+            this._selectRange.end.characterIndex +
+            (this._selectRange.end.position === 'after' ? 1 : 0);
+        return { start: Math.min(start, end), end: Math.max(start, end) };
     }
 
     private _handleMouseMove(e: MouseEvent) {
@@ -218,38 +265,30 @@ export class TMInput implements IInput {
                     if (!this._isMouseDown) {
                         return;
                     }
-                    const positionIndex = this.renderer.getPositionForCursor(
+                    if (this._isCursorShowing()) {
+                        this._selectRange.start = clone(this._cursorInfo);
+                    }
+                    this._selectRange.end = this.getCursorByCoordinate(
                         event.offsetX * this.devicePixelRatio,
                         event.offsetY * this.devicePixelRatio
                     );
-                    if (positionIndex !== -1) {
-                        this._selectRange.end = positionIndex;
-                        if (Math.abs(this._selectRange.end - this._selectRange.start) > 0) {
-                            this._hideCursor();
-
-                            this._rangeCanvas.width = this.textMetrics.width;
-                            this._rangeCanvas.height = this.textMetrics.height;
-                            const ctx = this._rangeCanvas.getContext('2d')!;
-                            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
-                            const selectStart = Math.min(
-                                this._selectRange.start,
-                                this._selectRange.end
-                            );
-                            const selectEnd = Math.max(
-                                this._selectRange.start,
-                                this._selectRange.end
-                            );
-                            this.textMetrics.characterMetrics.forEach((item, index) => {
-                                if (index > selectStart && index <= selectEnd) {
-                                    ctx.save();
-                                    ctx.beginPath();
-                                    ctx.globalAlpha = this._selectRange!.opacity;
-                                    ctx.fillStyle = this._selectRange!.color;
-                                    ctx.fillRect(item.x, item.y, item.width, item.height);
-                                    ctx.restore();
-                                }
-                            });
-                        }
+                    const targetRange = this._getSelectRange();
+                    if (targetRange.end - targetRange.start > 0) {
+                        this._hideCursor();
+                        this._rangeCanvas.width = this._textMetrics.width;
+                        this._rangeCanvas.height = this._textMetrics.height;
+                        const ctx = this._rangeCanvas.getContext('2d')!;
+                        ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
+                        this._textMetrics.allCharacter.forEach((item, index) => {
+                            if (index >= targetRange.start && index < targetRange.end) {
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.globalAlpha = this._selectRange!.opacity;
+                                ctx.fillStyle = this._selectRange!.color;
+                                ctx.fillRect(item.x, item.y, item.width, item.height);
+                                ctx.restore();
+                            }
+                        });
                     }
                 },
                 100,
@@ -259,8 +298,61 @@ export class TMInput implements IInput {
         this._renderRange(e);
     }
 
+    private _hideSelectRange() {
+        if (
+            this._selectRange.start.characterIndex !== -1 ||
+            this._selectRange.end.characterIndex !== -1
+        ) {
+            this._selectRange.start.characterIndex = -1;
+            this._selectRange.end.characterIndex = -1;
+            const ctx = this._rangeCanvas.getContext('2d')!;
+            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
+        }
+    }
+
     private _handleMouseUp() {
         this._isMouseDown = false;
+    }
+
+    applyStyle(style: Partial<TMTextStyle>) {}
+
+    private _handleDevicePixelRatioChanged() {
+        if (this._renderer && this._renderer.isUseDevicePixelRatio()) {
+            this._hideSelectRange();
+            this._hideCursor();
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.notifyDevicePixelRatioChanged();
+        }
+    }
+
+    private _handleInput(e: InputEvent) {
+        setTimeout(() => {
+            const data = e.data;
+            if (!data || this._isCompositing) {
+                return;
+            }
+
+            this._textData.content = this._insertToContentAtCursorPosition(
+                this._textData.content,
+                data
+            );
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.render();
+            this._cursorInfo.characterIndex += data.length;
+            this._hideSelectRange();
+            this._showCursor();
+        }, 0);
+    }
+
+    private _insertToContentAtCursorPosition(str: string, char: string): string {
+        if (this._cursorInfo.characterIndex > str.length) {
+            return str + char;
+        }
+        const index =
+            this._cursorInfo.position === 'after'
+                ? this._cursorInfo.characterIndex + 1
+                : this._cursorInfo.characterIndex;
+        return str.slice(0, index) + char + str.slice(index);
     }
 
     private _handleKeyDown(e: KeyboardEvent) {
@@ -274,96 +366,52 @@ export class TMInput implements IInput {
     }
 
     private _newLine() {
-        // this._textData.fragments.push({
-        //     content: '\n',
-        //     fontSize: this._defaultOptions.fontSize,
-        //     color: '',
-        //     fontFamily: '',
-        //     fontStyle: '',
-        // });
-        // this._textMetrics = this.renderer.measure(this._textData);
-        // this.renderer.render();
-        // this._cursorPosition++;
-        // this._showCursor();
+        this._textData.content = this._insertToContentAtCursorPosition(
+            this._textData.content,
+            '\n'
+        );
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render();
+        this._cursorInfo.characterIndex++;
+        this._hideSelectRange();
+        this._showCursor();
     }
 
     private _delete() {
         let startIndex = -1;
         let length = 0;
-        if (this._cursorPosition >= 0) {
-            startIndex = this._cursorPosition;
+        const selectRange = this._getSelectRange();
+        if (selectRange.end - selectRange.start > 0) {
+            startIndex = selectRange.start;
+            length = selectRange.end - selectRange.start;
+            this._cursorInfo.characterIndex = selectRange.start;
+            this._cursorInfo.position = 'before';
+        } else if (
+            (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'after') ||
+            this._cursorInfo.characterIndex > 0
+        ) {
+            startIndex = this._cursorInfo.characterIndex;
             length = 1;
-            this._cursorPosition--;
-        } else if (this._selectRange.end !== this._selectRange.start) {
-            this._cursorPosition = Math.min(this._selectRange.start, this._selectRange.end);
-            startIndex = this._cursorPosition + 1;
-            length = Math.abs(this._selectRange.end - this._selectRange.start);
+            this._cursorInfo.characterIndex--;
         }
         if (length > 0) {
-            this._textData.fragments.splice(startIndex, length);
+            this._textData.content =
+                this._textData.content.slice(0, startIndex) +
+                this._textData.content.slice(startIndex + length);
+            console.log('_delete', startIndex, length, this._cursorInfo);
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
+            this._hideSelectRange();
             this._showCursor();
         }
     }
 
-    private _showCursor() {
-        this._hideSelectRange();
-        clearTimeout(this._blinkTimer);
-        const textInfo: Rect = {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: this._defaultOptions.fontSize * this.devicePixelRatio,
-        };
-        if (this._cursorPosition >= 0) {
-            const bound = this.textMetrics.characterMetrics[this._cursorPosition];
-            textInfo.x = bound.x;
-            textInfo.y = bound.y;
-            textInfo.width = bound.width;
-            textInfo.height = bound.height;
-        }
-
-        this._cursor.style.left = `${(textInfo.x + textInfo.width) / this.devicePixelRatio}px`;
-        this._cursor.style.top = `${textInfo.y / this.devicePixelRatio}px`;
-        this._cursor.style.height = `${textInfo.height / this.devicePixelRatio}px`;
-        this._cursor.style.opacity = '1';
-        setTimeout(() => {
-            this._textArea.focus();
-            this._cursor.style.display = 'block';
-            this._blinkCursor(0);
-        }, 0);
-    }
-
-    private _hideCursor() {
-        clearTimeout(this._blinkTimer);
-        this._cursor.style.display = 'none';
-        this._cursorPosition = -1;
-    }
-
-    private _hideSelectRange() {
-        if (this._selectRange.start !== -1 || this._selectRange.end !== -1) {
-            this._selectRange.start === -1;
-            this._selectRange.end === -1;
-            const ctx = this._rangeCanvas.getContext('2d')!;
-            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
-        }
-    }
-
-    private _blinkCursor(opacity: number) {
-        clearTimeout(this._blinkTimer);
-        this._blinkTimer = setTimeout(() => {
-            this._cursor.style.opacity = String(opacity);
-            this._blinkCursor(opacity === 0 ? 1 : 0);
-        }, 500);
+    private _isCursorShowing() {
+        return this._cursor.style.display === 'block';
     }
 
     private get renderer() {
         return this._renderer!;
-    }
-
-    private get textMetrics() {
-        return this._textMetrics!;
     }
 
     private get devicePixelRatio() {

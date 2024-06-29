@@ -10,8 +10,8 @@ export interface TMInputOptions {
 }
 
 export interface TMSelectRange {
-    start: number;
-    end: number;
+    start: TMCursorInfo;
+    end: TMCursorInfo;
     color: string;
     opacity: number;
 }
@@ -23,8 +23,15 @@ export interface TMTextStyle {
     fontStyle: string;
 }
 
+export interface TMCursorInfo {
+    characterIndex: number;
+    position: 'before' | 'after';
+}
+
 export interface TMInput {
     init(renderer: TMRenderer): Promise<boolean>;
+
+    getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo;
 
     applyStyle(style: Partial<TMTextStyle>);
 

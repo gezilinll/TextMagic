@@ -12,8 +12,6 @@ export interface TMRenderer {
 
     getContainer(): HTMLDivElement;
 
-    getPositionForCursor(mouseX: number, mouseY: number): number;
-
     measure(data: TMTextData): TMTextMetrics;
 
     render();
