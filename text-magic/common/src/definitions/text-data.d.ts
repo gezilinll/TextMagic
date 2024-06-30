@@ -4,21 +4,18 @@ export interface TMTextMetrics {
     allCharacter: TMCharacterMetrics[];
 }
 export interface TMCharacterMetrics {
-    content: string;
+    char: string;
     x: number;
     y: number;
     width: number;
     height: number;
-    fakeBold: boolean;
-    fakeItalic: boolean;
-    fontSize: number;
-    fontFamily: string;
-    fontColor: string;
+    whichContent: number;
+    indexOfContent: number;
+    style: TMTextStyle;
     isNewLine: boolean;
 }
 
 export interface TMTextStyle {
-    id: string;
     color: string;
     fontSize: number;
     fontFamily: string;
@@ -29,6 +26,6 @@ export interface TMTextStyle {
 export interface TMTextData {
     width: number;
     height: number;
-    content: string;
-    style: TMTextStyle;
+    contents: string[];
+    styles: TMTextStyle[];
 }

@@ -101,41 +101,67 @@ export class TMRenderer implements IRenderer {
     }
 
     measure(data: TMTextData) {
+        if (data.contents.length === 0) {
+            return { width: 0, height: 0, allCharacter: [] };
+        }
         if (this._paragraph) {
             this._paragraph.delete();
             this._paragraph = null;
         }
         const CanvasKit = this.CanvasKit!;
         const characterBounds: TMCharacterMetrics[] = [];
+        const style = data.styles[0];
         const paraStyle = new CanvasKit.ParagraphStyle({
             textStyle: {
-                color: CanvasKit.parseColorString(data.style.color),
-                fontFamilies: [data.style.fontFamily],
-                fontSize: data.style.fontSize,
-                fontStyle: this._convertFontStyle(data.style.fontStyle, data.style.fontWeight),
+                color: CanvasKit.parseColorString(style.color),
+                fontFamilies: [style.fontFamily],
+                fontSize: style.fontSize,
+                fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             },
             textAlign: CanvasKit.TextAlign.Left,
         });
         const builder = CanvasKit.ParagraphBuilder.MakeFromFontProvider(paraStyle, this.FontMgr!);
-        builder.addText(data.content);
+        builder.addText(data.contents[0]);
+        builder.pop();
+        data.contents.forEach((content, index) => {
+            if (index === 0) {
+                return;
+            }
+            const style = data.styles[index];
+            const paraStyle = new CanvasKit.ParagraphStyle({
+                textStyle: {
+                    color: CanvasKit.parseColorString(style.color),
+                    fontFamilies: [style.fontFamily],
+                    fontSize: style.fontSize,
+                    fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
+                },
+                textAlign: CanvasKit.TextAlign.Left,
+            });
+            builder.pushStyle(paraStyle);
+            builder.addText(content);
+            builder.pop();
+        });
         this._paragraph = builder.build();
         this._paragraph.layout(data.width);
-        for (let index = 0; index < data.content.length; index++) {
-            const glyphInfo = this._paragraph.getGlyphInfoAt(index)!;
-            characterBounds.push({
-                content: data.content[index],
-                x: glyphInfo.graphemeLayoutBounds[0],
-                y: glyphInfo.graphemeLayoutBounds[1],
-                width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
-                height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
-                fakeBold: data.style.fontWeight !== 'normal',
-                fakeItalic: data.style.fontStyle !== 'normal',
-                fontSize: data.style.fontSize,
-                fontFamily: data.style.fontFamily,
-                fontColor: data.style.color,
-                isNewLine: data.content[index] === '\n',
-            });
-        }
+
+        let characterIndex = 0;
+        data.contents.forEach((content, index) => {
+            for (let i = 0; i < content.length; i++) {
+                const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
+                characterBounds.push({
+                    char: content[i],
+                    x: glyphInfo.graphemeLayoutBounds[0],
+                    y: glyphInfo.graphemeLayoutBounds[1],
+                    width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
+                    height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
+                    whichContent: index,
+                    indexOfContent: i,
+                    style: data.styles[index],
+                    isNewLine: content[i] === '\n',
+                });
+                characterIndex++;
+            }
+        });
 
         this._textMetrics = {
             width: this._paragraph.getMaxWidth(),
@@ -179,21 +205,21 @@ export class TMRenderer implements IRenderer {
             for (let index = line.startIndex; index < line.endIndex; index++) {
                 const character = this._textMetrics!.allCharacter[index];
                 const font = new CanvasKit.Font(
-                    this._typeFace.get(character.fontFamily)!,
-                    character.fontSize
+                    this._typeFace.get(character.style.fontFamily)!,
+                    character.style.fontSize
                 );
-                font.setEmbolden(character.fakeBold);
-                font.setSkewX(character.fakeItalic ? -1 / 4 : 0);
-                textPaint.setColor(CanvasKit.parseColorString(character.fontColor));
+                font.setEmbolden(character.style.fontWeight !== 'normal');
+                font.setSkewX(character.style.fontStyle !== 'normal' ? -1 / 4 : 0);
+                textPaint.setColor(CanvasKit.parseColorString(character.style.color));
                 this.canvas.drawText(
-                    character.content,
+                    character.char,
                     character.x,
                     character.y + character.height - line.descent,
                     strokePaint,
                     font
                 );
                 this.canvas.drawText(
-                    character.content,
+                    character.char,
                     character.x,
                     character.y + character.height - line.descent,
                     textPaint,

@@ -9,7 +9,6 @@ import {
     TMTextStyle,
 } from '@text-magic/common';
 import { clone, throttle } from 'lodash';
-import { v4 as uuidv4 } from 'uuid';
 
 export class TMInput implements IInput {
     private _textData: TMTextData;
@@ -43,15 +42,8 @@ export class TMInput implements IInput {
         this._textData = {
             width: this._defaultOptions.width,
             height: this._defaultOptions.height,
-            content: '',
-            style: {
-                id: uuidv4(),
-                color: '#000000',
-                fontSize: this._defaultOptions.fontSize,
-                fontFamily: this._defaultOptions.fontFamily,
-                fontStyle: 'normal',
-                fontWeight: 'normal',
-            },
+            contents: [],
+            styles: [],
         };
 
         this._selectRange = {
@@ -333,11 +325,11 @@ export class TMInput implements IInput {
     }
 
     applyStyle(style: Partial<TMTextStyle>) {
-        Object.assign(this._textData.style, style);
-        this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render();
-        this._hideSelectRange();
-        this._showCursor();
+        // Object.assign(this._textData.style, style);
+        // this._textMetrics = this.renderer.measure(this._textData);
+        // this.renderer.render();
+        // this._hideSelectRange();
+        // this._showCursor();
     }
 
     private _handleDevicePixelRatioChanged() {
@@ -356,10 +348,7 @@ export class TMInput implements IInput {
                 return;
             }
 
-            this._textData.content = this._insertToContentAtCursorPosition(
-                this._textData.content,
-                data
-            );
+            this._insertToContentAtCursorPosition(data);
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
             this._cursorInfo.characterIndex += data.length;
@@ -368,15 +357,44 @@ export class TMInput implements IInput {
         }, 0);
     }
 
-    private _insertToContentAtCursorPosition(str: string, char: string): string {
-        if (this._cursorInfo.characterIndex > str.length) {
-            return str + char;
+    private _insertToContentAtCursorPosition(data: string) {
+        if (this._textData.contents.length === 0) {
+            this._textData.contents.push(data);
+            this._textData.styles.push({
+                color: this._defaultOptions.fontColor,
+                fontFamily: this._defaultOptions.fontFamily,
+                fontSize: this._defaultOptions.fontSize,
+                fontWeight: 'normal',
+                fontStyle: 'normal',
+            });
+        } else {
+            let whichContent = 0;
+            let indexOfContent = 0;
+            if (
+                (this._cursorInfo.characterIndex < 0 && this._cursorInfo.position === 'before') ||
+                (this._cursorInfo.characterIndex === -1 && this._cursorInfo.position === 'after') ||
+                (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'before')
+            ) {
+                whichContent = 0;
+                indexOfContent = 0;
+            } else if (
+                this._cursorInfo.characterIndex === this._textMetrics.allCharacter.length &&
+                this._cursorInfo.position === 'before'
+            ) {
+                whichContent = this._textData.contents.length - 1;
+                indexOfContent =
+                    this._textData.contents[this._textData.contents.length - 1].length - 1;
+            } else {
+                const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+                whichContent = character.whichContent;
+                indexOfContent = character.indexOfContent;
+            }
+            const index =
+                this._cursorInfo.position === 'after' ? indexOfContent + 1 : indexOfContent;
+            const content = this._textData.contents[whichContent];
+            this._textData.contents[whichContent] =
+                content.slice(0, index) + data + content.slice(index);
         }
-        const index =
-            this._cursorInfo.position === 'after'
-                ? this._cursorInfo.characterIndex + 1
-                : this._cursorInfo.characterIndex;
-        return str.slice(0, index) + char + str.slice(index);
     }
 
     private _handleKeyDown(e: KeyboardEvent) {
@@ -390,10 +408,7 @@ export class TMInput implements IInput {
     }
 
     private _newLine() {
-        this._textData.content = this._insertToContentAtCursorPosition(
-            this._textData.content,
-            '\n'
-        );
+        this._insertToContentAtCursorPosition('\n');
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render();
         this._cursorInfo.characterIndex++;
@@ -419,9 +434,11 @@ export class TMInput implements IInput {
             this._cursorInfo.characterIndex--;
         }
         if (length > 0) {
-            this._textData.content =
-                this._textData.content.slice(0, startIndex) +
-                this._textData.content.slice(startIndex + length);
+            const baseCharacter = this._textMetrics.allCharacter[startIndex];
+            const content = this._textData.contents[baseCharacter.whichContent];
+            this._textData.contents[baseCharacter.whichContent] =
+                content.slice(0, baseCharacter.indexOfContent) +
+                content.slice(baseCharacter.indexOfContent + length);
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
             this._hideSelectRange();

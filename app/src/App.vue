@@ -61,8 +61,6 @@
             <br />
             <button @click="applyStyle({ fontWeight: 'normal' })">normal</button>
             <button @click="applyStyle({ fontWeight: 'bold' })">bold</button>
-            <button @click="applyStyle({ fontWeight: 'lighter' })">lighter</button>
-            <button @click="applyStyle({ fontWeight: 'bolder' })">bolder</button>
         </div>
     </div>
 </template>
