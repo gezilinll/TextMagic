@@ -4,10 +4,13 @@ export interface TMTextMetrics {
     allCharacter: TMCharacterMetrics[];
 }
 export interface TMCharacterMetrics {
+    content: string;
     x: number;
     y: number;
     width: number;
     height: number;
+    fakeBold: boolean;
+    fakeItalic: boolean;
     isNewLine: boolean;
 }
 
@@ -17,7 +20,7 @@ export interface TMTextStyle {
     fontSize: number;
     fontFamily: string;
     fontStyle: 'normal' | 'italic';
-    fontWeight: 'normal' | 'bold' | 'lighter' | 'bolder';
+    fontWeight: 'normal' | 'bold';
 }
 
 export interface TMTextData {

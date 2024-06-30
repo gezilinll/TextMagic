@@ -3,8 +3,16 @@ import {
     TMFontInfo,
     TMRenderer as IRenderer,
     TMTextData,
+    TMTextMetrics,
 } from '@text-magic/common';
-import { Canvas, CanvasKit, Paragraph, Surface, TypefaceFontProvider } from 'canvaskit-wasm';
+import {
+    Canvas,
+    CanvasKit,
+    Paragraph,
+    Surface,
+    Typeface,
+    TypefaceFontProvider,
+} from 'canvaskit-wasm';
 
 import { getCanvasKit } from './canvas-kit';
 
@@ -18,6 +26,10 @@ export class TMRenderer implements IRenderer {
     private _canvas: Canvas | null = null;
 
     private _paragraph: Paragraph | null = null;
+
+    private _text: string = '';
+    private _typeFace: Typeface | null = null;
+    private _textMetrics: TMTextMetrics | null = null;
 
     constructor() {
         this._container = document.createElement('div');
@@ -33,11 +45,13 @@ export class TMRenderer implements IRenderer {
 
         this._surface = this.CanvasKit.MakeCanvasSurface(this._canvasElement)!;
         this._canvas = this._surface.getCanvas();
+
         return true;
     }
 
     registerFont(font: TMFontInfo) {
         this.FontMgr!.registerFont(font.data, font.family);
+        this._typeFace = this.CanvasKit!.Typeface.MakeFreeTypeFaceFromData(font.data);
     }
 
     getContainer(): HTMLDivElement {
@@ -102,37 +116,78 @@ export class TMRenderer implements IRenderer {
         for (let index = 0; index < data.content.length; index++) {
             const glyphInfo = this._paragraph.getGlyphInfoAt(index)!;
             characterBounds.push({
+                content: data.content[index],
                 x: glyphInfo.graphemeLayoutBounds[0],
                 y: glyphInfo.graphemeLayoutBounds[1],
                 width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                 height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
+                fakeBold: data.style.fontWeight !== 'normal',
+                fakeItalic: data.style.fontStyle !== 'normal',
                 isNewLine: data.content[index] === '\n',
             });
         }
 
-        return {
+        this._textMetrics = {
             width: this._paragraph.getMaxWidth(),
             height: this._paragraph.getHeight(),
             allCharacter: characterBounds,
         };
+        return this._textMetrics;
     }
 
     render() {
-        if (!this._paragraph) {
+        if (!this._paragraph || !this._textMetrics) {
             return;
         }
 
         const CanvasKit = this.CanvasKit!;
 
-        this._canvasElement.width = this._paragraph.getMaxWidth() * window.devicePixelRatio;
-        this._canvasElement.height = this._paragraph.getHeight() * window.devicePixelRatio;
-        this._canvasElement.style.width = `${this._paragraph.getMaxWidth()}px`;
-        this._canvasElement.style.height = `${this._paragraph.getHeight()}px`;
+        this._canvasElement.width = 300 * window.devicePixelRatio;
+        this._canvasElement.height = 300 * window.devicePixelRatio;
+        this._canvasElement.style.width = '300px';
+        this._canvasElement.style.height = '300px';
         this._surface = CanvasKit.MakeCanvasSurface(this._canvasElement)!;
         this._canvas = this._surface.getCanvas();
-
         this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
-        this.canvas.drawParagraph(this._paragraph, 0, 0);
+
+        const textPaint = new CanvasKit.Paint();
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(CanvasKit.Color(0, 0, 0, 1.0));
+        textPaint.setStyle(CanvasKit.PaintStyle.Fill);
+        const strokePaint = new CanvasKit.Paint();
+        strokePaint.setAntiAlias(true);
+        strokePaint.setColor(CanvasKit.Color(255, 0, 0, 1.0)); // 红色
+        strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
+        strokePaint.setStrokeWidth(3.0);
+
+        const font = new CanvasKit.Font(this._typeFace, 36);
+
+        const lineMetrics = this._paragraph.getLineMetrics();
+        lineMetrics.forEach((line) => {
+            if (line.width === 0) {
+                return;
+            }
+            for (let index = line.startIndex; index < line.endIndex; index++) {
+                const character = this._textMetrics!.allCharacter[index];
+                font.setEmbolden(character.fakeBold);
+                font.setSkewX(character.fakeItalic ? -1 / 4 : 0);
+                this.canvas.drawText(
+                    character.content,
+                    character.x,
+                    character.y + character.height - 8,
+                    strokePaint,
+                    font
+                );
+                this.canvas.drawText(
+                    character.content,
+                    character.x,
+                    character.y + character.height - 8,
+                    textPaint,
+                    font
+                );
+            }
+        });
+
         this.surface.flush();
     }
 
