@@ -11,6 +11,9 @@ export interface TMCharacterMetrics {
     height: number;
     fakeBold: boolean;
     fakeItalic: boolean;
+    fontSize: number;
+    fontFamily: string;
+    fontColor: string;
     isNewLine: boolean;
 }
 

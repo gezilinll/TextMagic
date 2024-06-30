@@ -27,8 +27,7 @@ export class TMRenderer implements IRenderer {
 
     private _paragraph: Paragraph | null = null;
 
-    private _text: string = '';
-    private _typeFace: Typeface | null = null;
+    private _typeFace: Map<string, Typeface> = new Map();
     private _textMetrics: TMTextMetrics | null = null;
 
     constructor() {
@@ -50,8 +49,12 @@ export class TMRenderer implements IRenderer {
     }
 
     registerFont(font: TMFontInfo) {
+        if (this._typeFace.has(font.family)) {
+            return;
+        }
+        const CanvasKit = this.CanvasKit!;
         this.FontMgr!.registerFont(font.data, font.family);
-        this._typeFace = this.CanvasKit!.Typeface.MakeFreeTypeFaceFromData(font.data);
+        this._typeFace.set(font.family, CanvasKit.Typeface.MakeFreeTypeFaceFromData(font.data)!);
     }
 
     getContainer(): HTMLDivElement {
@@ -98,6 +101,10 @@ export class TMRenderer implements IRenderer {
     }
 
     measure(data: TMTextData) {
+        if (this._paragraph) {
+            this._paragraph.delete();
+            this._paragraph = null;
+        }
         const CanvasKit = this.CanvasKit!;
         const characterBounds: TMCharacterMetrics[] = [];
         const paraStyle = new CanvasKit.ParagraphStyle({
@@ -123,6 +130,9 @@ export class TMRenderer implements IRenderer {
                 height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
                 fakeBold: data.style.fontWeight !== 'normal',
                 fakeItalic: data.style.fontStyle !== 'normal',
+                fontSize: data.style.fontSize,
+                fontFamily: data.style.fontFamily,
+                fontColor: data.style.color,
                 isNewLine: data.content[index] === '\n',
             });
         }
@@ -132,6 +142,8 @@ export class TMRenderer implements IRenderer {
             height: this._paragraph.getHeight(),
             allCharacter: characterBounds,
         };
+
+        builder.delete();
         return this._textMetrics;
     }
 
@@ -152,15 +164,12 @@ export class TMRenderer implements IRenderer {
 
         const textPaint = new CanvasKit.Paint();
         textPaint.setAntiAlias(true);
-        textPaint.setColor(CanvasKit.Color(0, 0, 0, 1.0));
         textPaint.setStyle(CanvasKit.PaintStyle.Fill);
         const strokePaint = new CanvasKit.Paint();
         strokePaint.setAntiAlias(true);
         strokePaint.setColor(CanvasKit.Color(255, 0, 0, 1.0)); // 红色
         strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
         strokePaint.setStrokeWidth(3.0);
-
-        const font = new CanvasKit.Font(this._typeFace, 36);
 
         const lineMetrics = this._paragraph.getLineMetrics();
         lineMetrics.forEach((line) => {
@@ -169,26 +178,35 @@ export class TMRenderer implements IRenderer {
             }
             for (let index = line.startIndex; index < line.endIndex; index++) {
                 const character = this._textMetrics!.allCharacter[index];
+                const font = new CanvasKit.Font(
+                    this._typeFace.get(character.fontFamily)!,
+                    character.fontSize
+                );
                 font.setEmbolden(character.fakeBold);
                 font.setSkewX(character.fakeItalic ? -1 / 4 : 0);
+                textPaint.setColor(CanvasKit.parseColorString(character.fontColor));
                 this.canvas.drawText(
                     character.content,
                     character.x,
-                    character.y + character.height - 8,
+                    character.y + character.height - line.descent,
                     strokePaint,
                     font
                 );
                 this.canvas.drawText(
                     character.content,
                     character.x,
-                    character.y + character.height - 8,
+                    character.y + character.height - line.descent,
                     textPaint,
                     font
                 );
+                font.delete();
             }
         });
 
         this.surface.flush();
+
+        textPaint.delete();
+        strokePaint.delete();
     }
 
     isUseDevicePixelRatio(): boolean {
@@ -198,6 +216,8 @@ export class TMRenderer implements IRenderer {
     notifyDevicePixelRatioChanged() {
         this.render();
     }
+
+    destroy() {}
 
     private get surface() {
         return this._surface!;
