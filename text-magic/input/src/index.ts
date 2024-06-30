@@ -429,7 +429,10 @@ export class TMInput implements IInput {
             (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'after') ||
             this._cursorInfo.characterIndex > 0
         ) {
-            startIndex = this._cursorInfo.characterIndex;
+            startIndex =
+                this._cursorInfo.position === 'after'
+                    ? this._cursorInfo.characterIndex
+                    : this._cursorInfo.characterIndex - 1;
             length = 1;
             this._cursorInfo.characterIndex--;
         }
