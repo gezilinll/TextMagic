@@ -458,15 +458,17 @@ export class TMInput implements IInput {
                 indexOfContent =
                     this._textData.contents[this._textData.contents.length - 1].length - 1;
             } else {
-                const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+                const index =
+                    this._cursorInfo.position === 'before'
+                        ? this._cursorInfo.characterIndex - 1
+                        : this._cursorInfo.characterIndex;
+                const character = this._textMetrics.allCharacter[index];
                 whichContent = character.whichContent;
                 indexOfContent = character.indexOfContent;
             }
-            const index =
-                this._cursorInfo.position === 'after' ? indexOfContent + 1 : indexOfContent;
             const content = this._textData.contents[whichContent];
             this._textData.contents[whichContent] =
-                content.slice(0, index) + data + content.slice(index);
+                content.slice(0, indexOfContent + 1) + data + content.slice(indexOfContent + 1);
         }
     }
 
