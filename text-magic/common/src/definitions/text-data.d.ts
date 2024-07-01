@@ -9,6 +9,8 @@ export interface TMCharacterMetrics {
     y: number;
     width: number;
     height: number;
+    lineTop: number;
+    lineHeight: number;
     whichContent: number;
     indexOfContent: number;
     style: TMTextStyle;

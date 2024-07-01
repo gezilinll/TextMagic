@@ -121,39 +121,42 @@ export class TMRenderer implements IRenderer {
             textAlign: CanvasKit.TextAlign.Left,
         });
         const builder = CanvasKit.ParagraphBuilder.MakeFromFontProvider(paraStyle, this.FontMgr!);
-        builder.addText(data.contents[0]);
-        builder.pop();
         data.contents.forEach((content, index) => {
-            if (index === 0) {
-                return;
-            }
             const style = data.styles[index];
-            const paraStyle = new CanvasKit.ParagraphStyle({
-                textStyle: {
-                    color: CanvasKit.parseColorString(style.color),
-                    fontFamilies: [style.fontFamily],
-                    fontSize: style.fontSize,
-                    fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
-                },
-                textAlign: CanvasKit.TextAlign.Left,
+            const textStyle = new CanvasKit.TextStyle({
+                color: CanvasKit.parseColorString(style.color),
+                fontFamilies: [style.fontFamily],
+                fontSize: style.fontSize,
+                fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             });
-            builder.pushStyle(paraStyle);
+            builder.pushStyle(textStyle);
             builder.addText(content);
             builder.pop();
         });
         this._paragraph = builder.build();
         this._paragraph.layout(data.width);
 
+        const lineMetrics = this._paragraph.getLineMetrics();
+        let lineIndex = -1;
+        let currentLineTop = 0;
+        let currentLineBottom = 0;
         let characterIndex = 0;
         data.contents.forEach((content, index) => {
             for (let i = 0; i < content.length; i++) {
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
+                if (Math.abs(glyphInfo.graphemeLayoutBounds[1]) >= currentLineBottom) {
+                    lineIndex++;
+                    currentLineTop = currentLineBottom;
+                    currentLineBottom += lineMetrics[lineIndex].height;
+                }
                 characterBounds.push({
                     char: content[i],
                     x: glyphInfo.graphemeLayoutBounds[0],
                     y: glyphInfo.graphemeLayoutBounds[1],
                     width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                     height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
+                    lineTop: currentLineTop,
+                    lineHeight: lineMetrics[lineIndex].height,
                     whichContent: index,
                     indexOfContent: i,
                     style: data.styles[index],

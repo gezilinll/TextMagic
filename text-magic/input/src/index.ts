@@ -149,13 +149,13 @@ export class TMInput implements IInput {
         let result = -1;
         for (let i = 0; i < this._textMetrics.allCharacter.length; i++) {
             const bound = this._textMetrics.allCharacter[i];
-            if (mouseY >= bound.y && mouseY <= bound.y + bound.height) {
+            if (mouseY >= bound.y && mouseY <= bound.y + bound.lineHeight) {
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     result = i;
                     break;
                 } else if (i + 1 <= this._textMetrics.allCharacter.length - 1) {
                     const nextBound = this._textMetrics.allCharacter[i + 1];
-                    if (nextBound.isNewLine || nextBound.y > bound.y) {
+                    if (nextBound.isNewLine || nextBound.y >= bound.y + bound.lineHeight) {
                         result = i;
                         break;
                     }
@@ -196,7 +196,7 @@ export class TMInput implements IInput {
             (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'before')
         ) {
             const nextCharacter = this._textMetrics.allCharacter[0];
-            return { x: 0, y: 0, height: nextCharacter.height };
+            return { x: 0, y: 0, height: nextCharacter.lineHeight };
         }
         if (
             this._cursorInfo.characterIndex === this._textMetrics.allCharacter.length &&
@@ -210,14 +210,14 @@ export class TMInput implements IInput {
         if (character.isNewLine && this._cursorInfo.position === 'after') {
             return {
                 x: 0,
-                y: character.y + character.height,
-                height: character.height,
+                y: character.lineTop + character.height,
+                height: character.lineHeight,
             };
         }
         return {
             x: character.x + (this._cursorInfo.position === 'after' ? character.width : 0),
-            y: character.y,
-            height: character.height,
+            y: character.lineTop,
+            height: character.lineHeight,
         };
     }
 
@@ -325,9 +325,82 @@ export class TMInput implements IInput {
     }
 
     applyStyle(style: Partial<TMTextStyle>) {
-        // Object.assign(this._textData.style, style);
-        // this._textMetrics = this.renderer.measure(this._textData);
-        // this.renderer.render();
+        const range = this._getSelectRange();
+        if (range.start !== range.end) {
+            const startCharacter = this._textMetrics.allCharacter[range.start];
+            const endCharacter = this._textMetrics.allCharacter[range.end];
+            if (startCharacter.whichContent === endCharacter.whichContent) {
+                const content = this._textData.contents[startCharacter.whichContent];
+                const baseStyle = this._textData.styles[startCharacter.whichContent];
+                this._textData.contents[startCharacter.whichContent] = content.slice(
+                    0,
+                    startCharacter.indexOfContent
+                );
+                this._textData.contents.splice(
+                    startCharacter.whichContent + 1,
+                    0,
+                    content.slice(startCharacter.indexOfContent, endCharacter.indexOfContent)
+                );
+                this._textData.styles.splice(
+                    startCharacter.whichContent + 1,
+                    0,
+                    Object.assign(clone(baseStyle), style)
+                );
+                this._textData.contents.splice(
+                    startCharacter.whichContent + 2,
+                    0,
+                    content.slice(endCharacter.indexOfContent)
+                );
+                this._textData.styles.splice(startCharacter.whichContent + 2, 0, clone(baseStyle));
+            } else {
+                for (
+                    let index = startCharacter.whichContent + 1;
+                    index < endCharacter.whichContent;
+                    index++
+                ) {
+                    Object.assign(this._textData.styles[index], style);
+                }
+                const startContent = this._textData.contents[startCharacter.whichContent];
+                const startStyle = clone(this._textData.styles[startCharacter.whichContent]);
+                const endContent = this._textData.contents[endCharacter.whichContent];
+                const endStyle = clone(this._textData.styles[endCharacter.whichContent]);
+                this._textData.contents[startCharacter.whichContent] = startContent.slice(
+                    0,
+                    startCharacter.indexOfContent
+                );
+                this._textData.contents[endCharacter.whichContent] = endContent.slice(
+                    endCharacter.indexOfContent
+                );
+                this._textData.contents.splice(
+                    startCharacter.whichContent + 1,
+                    0,
+                    startContent.slice(startCharacter.indexOfContent)
+                );
+                this._textData.styles.splice(
+                    startCharacter.whichContent + 1,
+                    0,
+                    Object.assign(startStyle, style)
+                );
+                this._textData.contents.splice(
+                    endCharacter.whichContent + 1,
+                    0,
+                    endContent.slice(0, endCharacter.indexOfContent)
+                );
+                this._textData.styles.splice(
+                    endCharacter.whichContent + 1,
+                    0,
+                    Object.assign(endStyle, style)
+                );
+            }
+        } else if (this._isCursorShowing()) {
+            //TODO
+        } else {
+            this._textData.styles.forEach((styleItem) => {
+                Object.assign(styleItem, style);
+            });
+        }
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render();
         // this._hideSelectRange();
         // this._showCursor();
     }
