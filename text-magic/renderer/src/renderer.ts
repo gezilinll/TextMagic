@@ -137,18 +137,20 @@ export class TMRenderer implements IRenderer {
         this._paragraph.layout(data.width);
 
         const lineMetrics = this._paragraph.getLineMetrics();
-        let lineIndex = -1;
         let currentLineTop = 0;
-        let currentLineBottom = 0;
+        let currentLineBottom = lineMetrics[0].height;
+        let lineIndex = 0;
         let characterIndex = 0;
         data.contents.forEach((content, index) => {
             for (let i = 0; i < content.length; i++) {
-                const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
-                if (Math.abs(glyphInfo.graphemeLayoutBounds[1]) >= currentLineBottom) {
+                let currentLine = lineMetrics[lineIndex];
+                if (content[i] !== '\n' && lineMetrics[lineIndex].endIndex <= characterIndex) {
                     lineIndex++;
                     currentLineTop = currentLineBottom;
-                    currentLineBottom += lineMetrics[lineIndex].height;
+                    currentLine = lineMetrics[lineIndex];
+                    currentLineBottom += currentLine.height;
                 }
+                const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
                 characterBounds.push({
                     char: content[i],
                     x: glyphInfo.graphemeLayoutBounds[0],
@@ -156,7 +158,7 @@ export class TMRenderer implements IRenderer {
                     width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                     height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
                     lineTop: currentLineTop,
-                    lineHeight: lineMetrics[lineIndex].height,
+                    lineHeight: currentLine.height,
                     whichContent: index,
                     indexOfContent: i,
                     style: data.styles[index],
