@@ -216,6 +216,22 @@ export class TMRenderer implements IRenderer {
         textPaint.setStyle(CanvasKit.PaintStyle.Fill);
         const lineMetrics = this._paragraph.getLineMetrics();
         this._textMetrics!.allCharacter.forEach((character) => {
+            if (character.style.highlight) {
+                const highlightPaint = new CanvasKit.Paint();
+                highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
+                highlightPaint.setColor(
+                    CanvasKit.parseColorString(character.style.highlight.color)
+                );
+                this.canvas.drawRect4f(
+                    character.x,
+                    this._textMetrics!.rows[character.whichRow].top,
+                    character.x + character.width,
+                    this._textMetrics!.rows[character.whichRow].height,
+                    highlightPaint
+                );
+                highlightPaint.delete();
+            }
+
             const font = new CanvasKit.Font(
                 this._typeFace.get(character.style.fontFamily)!,
                 character.style.fontSize
@@ -297,7 +313,7 @@ export class TMRenderer implements IRenderer {
                 if (character.style.decoration.line === 'underline') {
                     yPosition =
                         this._textMetrics!.rows[character.whichRow].bottom -
-                        character.style.decoration.thickness / 2;
+                        character.style.decoration.thickness;
                 } else {
                     yPosition =
                         character.y +

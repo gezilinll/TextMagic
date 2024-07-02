@@ -28,10 +28,11 @@ export interface TMTextStyle {
     fontFamily: string;
     fontStyle: 'normal' | 'italic';
     fontWeight: 'normal' | 'bold';
+    decoration?: TMTextDecorationStyle;
     stroke?: TMTextStrokeStyle;
     shadow?: TMTextShadowStyle;
     blur?: TMTextBlurStyle;
-    decoration?: TMTextDecorationStyle;
+    highlight?: TMTextHighlightStyle;
 }
 export interface TMTextStrokeStyle {
     color: string;
@@ -54,6 +55,7 @@ export interface TMTextDecorationStyle {
     style: 'solid' | 'wavy';
     thickness: number;
 }
+
 export interface TMTextData {
     width: number;
     height: number;

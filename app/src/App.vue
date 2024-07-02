@@ -177,6 +177,25 @@
                 line-through-solid
             </button>
         </div>
+
+        <div class="input-group-left">
+            <label>Text Highlight: </label>
+            <br />
+            <button @click="applyStyle({ highlight: undefined })">none</button>
+            <br />
+            <button
+                @click="
+                    applyStyle({
+                        highlight: {
+                            color: '#DAFF00',
+                        },
+                    })
+                "
+                style="margin-top: 2px"
+            >
+                enable
+            </button>
+        </div>
     </div>
 </template>
 
@@ -233,7 +252,7 @@ function applyStyle(style: Partial<TMTextStyle>) {
 
 const root: Ref<HTMLDivElement | null> = ref(null);
 const input = new MagicInput({
-    width: 280,
+    width: 720,
     height: 200,
     fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
     fontSize: fontSize.value,
