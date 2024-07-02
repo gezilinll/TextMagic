@@ -72,7 +72,7 @@
         </div>
 
         <div class="input-group-right">
-            <label>Stroke Type: </label>
+            <label>Text Stroke: </label>
             <br />
             <button @click="applyStyle({ stroke: undefined })">none</button>
             <button
@@ -80,6 +80,18 @@
                 style="margin-left: 8px"
             >
                 center
+            </button>
+        </div>
+
+        <div class="input-group-right" style="margin-top: 72px">
+            <label>Text Shadow: </label>
+            <br />
+            <button @click="applyStyle({ shadow: undefined })">none</button>
+            <button
+                @click="applyStyle({ shadow: { color: 'rgb(66, 255, 0)', blurRadius: 5 } })"
+                style="margin-left: 5px"
+            >
+                enable
             </button>
         </div>
     </div>

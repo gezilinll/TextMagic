@@ -29,11 +29,16 @@ export interface TMTextStyle {
     fontStyle: 'normal' | 'italic';
     fontWeight: 'normal' | 'bold';
     stroke?: TMTextStrokeStyle;
+    shadow?: TMTextShadowStyle;
 }
 export interface TMTextStrokeStyle {
     color: string;
     width: number;
     type: 'inner' | 'outer' | 'center';
+}
+export interface TMTextShadowStyle {
+    color: string;
+    blurRadius: number;
 }
 
 export interface TMTextData {

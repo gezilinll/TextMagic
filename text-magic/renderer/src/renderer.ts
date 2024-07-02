@@ -222,6 +222,30 @@ export class TMRenderer implements IRenderer {
             );
             font.setEmbolden(character.style.fontWeight !== 'normal');
             font.setSkewX(character.style.fontStyle === 'normal' ? 0 : -1 / 4);
+            if (character.style.shadow) {
+                const shadowPaint = new CanvasKit.Paint();
+                shadowPaint.setColor(CanvasKit.Color(255, 0, 0, 1.0));
+                shadowPaint.setMaskFilter(
+                    CanvasKit.MaskFilter.MakeBlur(
+                        CanvasKit.BlurStyle.Normal,
+                        0.57735 * character.style.shadow.blurRadius + 0.5,
+                        false
+                    )
+                );
+                if (character.style.stroke) {
+                    shadowPaint.setStyle(CanvasKit.PaintStyle.Stroke);
+                    shadowPaint.setStrokeWidth(character.style.stroke.width);
+                }
+                this.canvas.drawText(
+                    character.char,
+                    character.x,
+                    this._textMetrics!.rows[character.whichRow].bottom -
+                        lineMetrics[character.whichRow].descent,
+                    shadowPaint,
+                    font
+                );
+                shadowPaint.delete();
+            }
             if (character.style.stroke) {
                 const strokePaint = new CanvasKit.Paint();
                 strokePaint.setAntiAlias(true);
@@ -238,6 +262,7 @@ export class TMRenderer implements IRenderer {
                 );
                 strokePaint.delete();
             }
+
             textPaint.setColor(CanvasKit.parseColorString(character.style.color));
             this.canvas.drawText(
                 character.char,
