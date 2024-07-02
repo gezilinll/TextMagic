@@ -6,7 +6,6 @@ export interface TMInputOptions {
     fontSize: number;
     fontColor: string;
     fontFamily: string;
-    autoBlur: boolean;
 }
 
 export interface TMSelectRange {

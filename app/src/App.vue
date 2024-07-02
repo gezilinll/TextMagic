@@ -123,7 +123,6 @@ const input = new MagicInput({
     fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
     fontSize: fontSize.value,
     fontFamily: 'Roboto',
-    autoBlur: false,
 });
 
 onMounted(async () => {
@@ -142,8 +141,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+html,
 body {
     margin: 0px;
+    padding: 0;
     overflow: hidden;
     -webkit-user-select: none;
 }
@@ -154,13 +155,14 @@ body {
     height: 100vh;
     margin: 0px;
     overflow: hidden;
+    padding: 0;
     background-color: rgb(222, 222, 222);
 }
 
 .input-container {
     position: absolute;
-    left: 280px;
-    right: 280px;
+    left: 220px;
+    right: 220px;
     top: 16px;
     bottom: 16px;
     overflow: hidden;
@@ -168,7 +170,8 @@ body {
 }
 
 .input-group {
-    margin-top: 10px;
+    margin-top: 16px;
     margin-bottom: 10px;
+    margin-left: 6px;
 }
 </style>

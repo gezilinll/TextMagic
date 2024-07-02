@@ -36,7 +36,6 @@ export class TMInput implements IInput {
             fontFamily: 'Yahei',
             width: 260,
             height: 200,
-            autoBlur: false,
         };
 
         this._textData = {
@@ -54,8 +53,9 @@ export class TMInput implements IInput {
         };
 
         this._textArea = document.createElement('textarea');
-        this._textArea.style.position = 'fixed';
-        this._textArea.style.left = '-99999px';
+        this._textArea.style.position = 'absolute';
+        this._textArea.style.left = '0px';
+        this._textArea.style.zIndex = '-9999';
         this._textArea.addEventListener('input', (event) => {
             this._handleInput(event as InputEvent);
         });
@@ -67,24 +67,20 @@ export class TMInput implements IInput {
         });
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
 
-        if (this._defaultOptions.autoBlur) {
-            document.addEventListener('mousedown', (event) => {
-                if (!this._renderer) {
-                    return;
-                }
-                const bound = this._renderer.getContainer().getBoundingClientRect();
-                if (
-                    event.clientX >= bound.x &&
-                    event.clientX <= bound.x + bound.width &&
-                    event.clientY >= bound.y &&
-                    event.clientY <= bound.y + bound.height
-                ) {
-                    this.focus();
-                } else {
-                    this.blur();
-                }
-            });
-        }
+        document.addEventListener('mousedown', (event) => {
+            if (!this._renderer) {
+                return;
+            }
+            const bound = this._renderer.getContainer().getBoundingClientRect();
+            if (
+                event.clientX < bound.left ||
+                event.clientX > bound.right ||
+                event.clientY < bound.top ||
+                event.clientY >= bound.bottom
+            ) {
+                this._textArea.blur();
+            }
+        });
 
         this._cursor = document.createElement('div');
         this._cursor.style.position = 'absolute';
@@ -133,6 +129,7 @@ export class TMInput implements IInput {
     blur() {
         this._hideCursor();
         this._hideSelectRange();
+        this._textArea.blur();
     }
 
     destroy() {
@@ -209,6 +206,8 @@ export class TMInput implements IInput {
         this._cursor.style.top = `${bound.y / this.devicePixelRatio}px`;
         this._cursor.style.height = `${bound.height / this.devicePixelRatio}px`;
         this._cursor.style.opacity = '1';
+        this._textArea.style.left = `${bound.x / this.devicePixelRatio}px`;
+        this._textArea.style.top = `${bound.y / this.devicePixelRatio}px`;
         setTimeout(() => {
             this._textArea.focus();
             this._cursor.style.display = 'block';
@@ -378,6 +377,8 @@ export class TMInput implements IInput {
                     Object.assign(endStyle, style)
                 );
             }
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.render();
             this._showSelectRange();
         } else if (this._isCursorShowing()) {
             //TODO
@@ -385,9 +386,9 @@ export class TMInput implements IInput {
             this._textData.styles.forEach((styleItem) => {
                 Object.assign(styleItem, style);
             });
+            this._textMetrics = this.renderer.measure(this._textData);
+            this.renderer.render();
         }
-        this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render();
     }
 
     private _handleDevicePixelRatioChanged() {

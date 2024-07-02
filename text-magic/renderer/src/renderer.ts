@@ -203,10 +203,10 @@ export class TMRenderer implements IRenderer {
             return;
         }
 
-        this._canvasElement.width = 300 * window.devicePixelRatio;
-        this._canvasElement.height = 300 * window.devicePixelRatio;
-        this._canvasElement.style.width = '300px';
-        this._canvasElement.style.height = '300px';
+        this._canvasElement.width = this._paragraph.getMaxWidth() * window.devicePixelRatio;
+        this._canvasElement.height = this._paragraph.getHeight() * window.devicePixelRatio;
+        this._canvasElement.style.width = `${this._paragraph.getMaxWidth()}px`;
+        this._canvasElement.style.height = `${this._paragraph.getHeight()}px`;
         this._surface = CanvasKit.MakeCanvasSurface(this._canvasElement)!;
         this._canvas = this._surface.getCanvas();
         this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
