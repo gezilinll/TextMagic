@@ -310,7 +310,7 @@ export class TMInput implements IInput {
 
     applyStyle(style: Partial<TMTextStyle>) {
         const range = this._getSelectRange();
-        if (range.start !== range.end) {
+        if (range.start !== -1 && range.end !== -1) {
             const startCharacter = this._textMetrics.allCharacter[range.start];
             const endCharacter = this._textMetrics.allCharacter[range.end];
             if (startCharacter.whichContent === endCharacter.whichContent) {
@@ -323,7 +323,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(
                     startCharacter.whichContent + 1,
                     0,
-                    content.slice(startCharacter.indexOfContent, endCharacter.indexOfContent)
+                    content.slice(startCharacter.indexOfContent, endCharacter.indexOfContent + 1)
                 );
                 this._textData.styles.splice(
                     startCharacter.whichContent + 1,
@@ -333,7 +333,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(
                     startCharacter.whichContent + 2,
                     0,
-                    content.slice(endCharacter.indexOfContent)
+                    content.slice(endCharacter.indexOfContent + 1)
                 );
                 this._textData.styles.splice(startCharacter.whichContent + 2, 0, clone(baseStyle));
             } else {
@@ -353,7 +353,7 @@ export class TMInput implements IInput {
                     startCharacter.indexOfContent
                 );
                 this._textData.contents[endCharacter.whichContent] = endContent.slice(
-                    endCharacter.indexOfContent
+                    endCharacter.indexOfContent + 1
                 );
                 this._textData.contents.splice(
                     startCharacter.whichContent + 1,
@@ -368,7 +368,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(
                     endCharacter.whichContent + 1,
                     0,
-                    endContent.slice(0, endCharacter.indexOfContent)
+                    endContent.slice(0, endCharacter.indexOfContent + 1)
                 );
                 this._textData.styles.splice(
                     endCharacter.whichContent + 1,
@@ -425,19 +425,24 @@ export class TMInput implements IInput {
                 fontStyle: 'normal',
             });
         } else {
-            let whichContent = 0;
-            let indexOfContent = 0;
-            if (this._cursorInfo.characterIndex < 0) {
-                whichContent = 0;
-                indexOfContent = 0;
+            const range = this._getSelectRange();
+            if (range.start !== -1 && range.end !== -1) {
             } else {
-                const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
-                whichContent = character.whichContent;
-                indexOfContent = character.indexOfContent;
+                let whichContent = 0;
+                let indexOfContent = 0;
+                if (this._cursorInfo.characterIndex < 0) {
+                    whichContent = 0;
+                    indexOfContent = 0;
+                } else {
+                    const character =
+                        this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+                    whichContent = character.whichContent;
+                    indexOfContent = character.indexOfContent;
+                }
+                const content = this._textData.contents[whichContent];
+                this._textData.contents[whichContent] =
+                    content.slice(0, indexOfContent + 1) + data + content.slice(indexOfContent + 1);
             }
-            const content = this._textData.contents[whichContent];
-            this._textData.contents[whichContent] =
-                content.slice(0, indexOfContent + 1) + data + content.slice(indexOfContent + 1);
         }
     }
 
@@ -466,10 +471,7 @@ export class TMInput implements IInput {
         if (selectRange.end !== -1 && selectRange.start !== -1) {
             updated = true;
             const startCharacter = this._textMetrics.allCharacter[selectRange.start];
-            const endCharacter =
-                this._textMetrics.allCharacter[
-                    Math.min(selectRange.end, this._textMetrics.allCharacter.length - 1)
-                ];
+            const endCharacter = this._textMetrics.allCharacter[selectRange.end];
             if (startCharacter.whichContent === endCharacter.whichContent) {
                 const content = this._textData.contents[startCharacter.whichContent];
                 this._textData.contents[startCharacter.whichContent] =
@@ -487,7 +489,7 @@ export class TMInput implements IInput {
                 );
                 const endContent = this._textData.contents[endCharacter.whichContent];
                 this._textData.contents[endCharacter.whichContent] = endContent.slice(
-                    endCharacter.indexOfContent
+                    endCharacter.indexOfContent + 1
                 );
                 const sliceStart =
                     this._textData.contents[startCharacter.whichContent].length === 0
@@ -495,8 +497,8 @@ export class TMInput implements IInput {
                         : startCharacter.whichContent + 1;
                 const sliceEnd =
                     this._textData.contents[endCharacter.whichContent].length === 0
-                        ? startCharacter.whichContent + 1
-                        : startCharacter.whichContent;
+                        ? endCharacter.whichContent + 1
+                        : endCharacter.whichContent;
                 this._textData.contents.splice(sliceStart, sliceEnd - sliceStart);
                 this._textData.styles.splice(sliceStart, sliceEnd - sliceStart);
             }
