@@ -2,6 +2,7 @@ import {
     TMCharacterMetrics,
     TMFontInfo,
     TMRenderer as IRenderer,
+    TMRowMetrics,
     TMTextData,
     TMTextMetrics,
 } from '@text-magic/common';
@@ -106,7 +107,7 @@ export class TMRenderer implements IRenderer {
             this._paragraph = null;
         }
         if (data.contents.length === 0) {
-            return { width: 0, height: 0, allCharacter: [] };
+            return { width: 0, height: 0, allCharacter: [], rows: [] };
         }
         const CanvasKit = this.CanvasKit!;
         const characterBounds: TMCharacterMetrics[] = [];
@@ -138,21 +139,28 @@ export class TMRenderer implements IRenderer {
 
         const lineMetrics = this._paragraph.getLineMetrics();
         const shapedLines = this._paragraph.getShapedLines();
-        const rows: { top: number; bottom: number }[] = [];
+        const rows: TMRowMetrics[] = [];
         let shapedLineIndex = 0;
         lineMetrics.forEach((line, index) => {
             if (line.width > 0) {
                 const shapeLine = shapedLines[shapedLineIndex];
                 rows.push({
+                    width: line.width,
+                    height: line.height,
                     top: rows.length > 0 ? rows[rows.length - 1].bottom : shapeLine.top,
                     bottom: shapeLine.bottom,
                 });
                 shapedLineIndex++;
             } else if (index === 0) {
-                rows.push({ top: 0, bottom: line.height });
+                rows.push({ width: 0, height: line.height, top: 0, bottom: line.height });
             } else {
                 const lastRow = rows[rows.length - 1];
-                rows.push({ top: lastRow.bottom, bottom: lastRow.bottom + line.height });
+                rows.push({
+                    top: lastRow.bottom,
+                    bottom: lastRow.bottom + line.height,
+                    width: 0,
+                    height: line.height,
+                });
             }
         });
         let rowIndex = 0;
@@ -175,19 +183,17 @@ export class TMRenderer implements IRenderer {
                             ? 0
                             : glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                     height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
-                    lineTop: rows[rowIndex].top,
-                    lineHeight: rows[rowIndex].bottom - rows[rowIndex].top,
                     whichContent: index,
                     indexOfContent: i,
                     lineIndex: rowIndex,
                     style: data.styles[index],
-                    isNewLine: content[i] === '\n',
                 });
                 characterIndex++;
             }
         });
 
         this._textMetrics = {
+            rows,
             width: this._paragraph.getMaxWidth(),
             height: this._paragraph.getHeight(),
             allCharacter: characterBounds,

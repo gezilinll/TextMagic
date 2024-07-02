@@ -1,7 +1,14 @@
 export interface TMTextMetrics {
     width: number;
     height: number;
+    rows: TMRowMetrics[];
     allCharacter: TMCharacterMetrics[];
+}
+export interface TMRowMetrics {
+    width: number;
+    height: number;
+    top: number;
+    bottom: number;
 }
 export interface TMCharacterMetrics {
     char: string;
@@ -9,13 +16,10 @@ export interface TMCharacterMetrics {
     y: number;
     width: number;
     height: number;
-    lineTop: number;
-    lineHeight: number;
     lineIndex: number;
     whichContent: number;
     indexOfContent: number;
     style: TMTextStyle;
-    isNewLine: boolean;
 }
 
 export interface TMTextStyle {

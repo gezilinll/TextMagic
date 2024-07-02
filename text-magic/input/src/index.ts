@@ -99,7 +99,7 @@ export class TMInput implements IInput {
         this._rangeCanvas.style.position = 'absolute';
         this._rangeCanvas.style.left = '0px';
 
-        this._textMetrics = { width: 0, height: 0, allCharacter: [] };
+        this._textMetrics = { width: 0, height: 0, allCharacter: [], rows: [] };
         this._cursorInfo = this.getCursorByCoordinate(0, 0);
     }
 
@@ -149,7 +149,8 @@ export class TMInput implements IInput {
         let result = -1;
         for (let i = 0; i < this._textMetrics.allCharacter.length; i++) {
             const bound = this._textMetrics.allCharacter[i];
-            if (mouseY >= bound.y && mouseY <= bound.y + bound.lineHeight) {
+            const row = this._textMetrics.rows[bound.lineIndex];
+            if (mouseY >= row.top && mouseY <= row.bottom) {
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     result = i;
                     break;
@@ -190,13 +191,14 @@ export class TMInput implements IInput {
         }
         if (this._cursorInfo.characterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
             const nextCharacter = this._textMetrics.allCharacter[0];
-            return { x: 0, y: 0, height: nextCharacter.lineHeight };
+            return { x: 0, y: 0, height: this._textMetrics.rows[nextCharacter.lineIndex].height };
         }
         const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+        const row = this._textMetrics.rows[character.lineIndex];
         return {
             x: character.x + character.width,
-            y: character.lineTop,
-            height: character.lineHeight,
+            y: row.top,
+            height: row.height,
         };
     }
 
@@ -260,36 +262,35 @@ export class TMInput implements IInput {
                         event.offsetX * this.devicePixelRatio,
                         event.offsetY * this.devicePixelRatio
                     );
-                    const targetRange = this._getSelectRange();
-                    if (targetRange.start !== -1 && targetRange.end !== -1) {
-                        this._hideCursor();
-                        this._rangeCanvas.width = this._textMetrics.width * this.devicePixelRatio;
-                        this._rangeCanvas.height = this._textMetrics.height * this.devicePixelRatio;
-                        this._rangeCanvas.style.width = `${this._textMetrics.width}px`;
-                        this._rangeCanvas.style.height = `${this._textMetrics.height}px`;
-                        const ctx = this._rangeCanvas.getContext('2d')!;
-                        ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
-                        for (let index = targetRange.start; index <= targetRange.end; index++) {
-                            const character = this._textMetrics.allCharacter[index];
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.globalAlpha = this._selectRange!.opacity;
-                            ctx.fillStyle = this._selectRange!.color;
-                            ctx.fillRect(
-                                character.x,
-                                character.y,
-                                character.width,
-                                character.height
-                            );
-                            ctx.restore();
-                        }
-                    }
+                    this._showSelectRange();
                 },
                 100,
                 { leading: true }
             );
         }
         this._renderRange(e);
+    }
+
+    private _showSelectRange() {
+        const targetRange = this._getSelectRange();
+        if (targetRange.start !== -1 && targetRange.end !== -1) {
+            this._hideCursor();
+            this._rangeCanvas.width = this._textMetrics.width * this.devicePixelRatio;
+            this._rangeCanvas.height = this._textMetrics.height * this.devicePixelRatio;
+            this._rangeCanvas.style.width = `${this._textMetrics.width}px`;
+            this._rangeCanvas.style.height = `${this._textMetrics.height}px`;
+            const ctx = this._rangeCanvas.getContext('2d')!;
+            ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
+            for (let index = targetRange.start; index <= targetRange.end; index++) {
+                const character = this._textMetrics.allCharacter[index];
+                ctx.save();
+                ctx.beginPath();
+                ctx.globalAlpha = this._selectRange!.opacity;
+                ctx.fillStyle = this._selectRange!.color;
+                ctx.fillRect(character.x, character.y, character.width, character.height);
+                ctx.restore();
+            }
+        }
     }
 
     private _hideSelectRange() {
@@ -376,6 +377,7 @@ export class TMInput implements IInput {
                     Object.assign(endStyle, style)
                 );
             }
+            this._showSelectRange();
         } else if (this._isCursorShowing()) {
             //TODO
         } else {
@@ -385,8 +387,6 @@ export class TMInput implements IInput {
         }
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render();
-        // this._hideSelectRange();
-        // this._showCursor();
     }
 
     private _handleDevicePixelRatioChanged() {
