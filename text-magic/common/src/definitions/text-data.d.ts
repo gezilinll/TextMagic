@@ -31,6 +31,7 @@ export interface TMTextStyle {
     stroke?: TMTextStrokeStyle;
     shadow?: TMTextShadowStyle;
     blur?: TMTextBlurStyle;
+    decoration?: TMTextDecorationStyle;
 }
 export interface TMTextStrokeStyle {
     color: string;
@@ -44,7 +45,15 @@ export interface TMTextShadowStyle {
 export interface TMTextBlurStyle {
     radius: number;
 }
-
+export interface TMTextHighlightStyle {
+    color: string;
+}
+export interface TMTextDecorationStyle {
+    line: 'underline' | 'line-through';
+    color: string;
+    style: 'solid' | 'wavy';
+    thickness: number;
+}
 export interface TMTextData {
     width: number;
     height: number;

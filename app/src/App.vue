@@ -103,6 +103,80 @@
                 enable
             </button>
         </div>
+
+        <div class="input-group-left">
+            <label>Text Decoration: </label>
+            <br />
+            <button @click="applyStyle({ decoration: undefined })">none</button>
+            <br />
+            <button
+                @click="
+                    applyStyle({
+                        decoration: {
+                            line: 'underline',
+                            color: 'rgb(0, 0, 255)',
+                            style: 'wavy',
+                            thickness: 2,
+                        },
+                    })
+                "
+                style="margin-top: 2px"
+            >
+                underline-wavy
+            </button>
+            <br />
+            <button
+                @click="
+                    applyStyle({
+                        decoration: {
+                            line: 'underline',
+                            color: 'rgb(0, 0, 255)',
+                            style: 'solid',
+                            thickness: 2,
+                        },
+                    })
+                "
+            >
+                underline-solid
+            </button>
+        </div>
+        <div class="input-group-left">
+            <label>Text Decoration: </label>
+            <br />
+            <button @click="applyStyle({ decoration: undefined })">none</button>
+            <br />
+            <button
+                @click="
+                    applyStyle({
+                        decoration: {
+                            line: 'line-through',
+                            color: 'rgb(0, 0, 255)',
+                            style: 'wavy',
+                            thickness: 2,
+                        },
+                    })
+                "
+                style="margin-top: 2px"
+            >
+                line-through-wavy
+            </button>
+            <br />
+            <button
+                @click="
+                    applyStyle({
+                        decoration: {
+                            line: 'line-through',
+                            color: 'rgb(0, 0, 255)',
+                            style: 'solid',
+                            thickness: 2,
+                        },
+                    })
+                "
+                style="margin-top: 2px"
+            >
+                line-through-solid
+            </button>
+        </div>
     </div>
 </template>
 

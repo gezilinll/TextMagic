@@ -283,6 +283,49 @@ export class TMRenderer implements IRenderer {
                 textPaint,
                 font
             );
+            if (character.style.decoration) {
+                const decorationPaint = new CanvasKit.Paint();
+                decorationPaint.setAntiAlias(true);
+                decorationPaint.setStyle(CanvasKit.PaintStyle.Stroke);
+                decorationPaint.setStrokeWidth(character.style.decoration.thickness);
+                decorationPaint.setColor(
+                    CanvasKit.parseColorString(character.style.decoration.color)
+                );
+                const startX = character.x;
+                const endX = character.x + character.width;
+                let yPosition = 0;
+                if (character.style.decoration.line === 'underline') {
+                    yPosition =
+                        this._textMetrics!.rows[character.whichRow].bottom -
+                        character.style.decoration.thickness / 2;
+                } else {
+                    yPosition =
+                        character.y +
+                        character.height / 2 -
+                        character.style.decoration.thickness / 2;
+                }
+                if (character.style.decoration.style === 'solid') {
+                    this.canvas.drawLine(
+                        character.x,
+                        yPosition,
+                        character.x + character.width,
+                        yPosition,
+                        decorationPaint
+                    );
+                } else {
+                    const amplitude = character.style.decoration.thickness;
+                    const frequency = 0.8;
+                    const path = new CanvasKit.Path();
+                    path.moveTo(startX, yPosition);
+                    for (let x = startX; x <= endX; x += 1) {
+                        const y = yPosition + amplitude * Math.sin(frequency * x);
+                        path.lineTo(x, y);
+                    }
+                    this.canvas.drawPath(path, decorationPaint);
+                    path.delete();
+                }
+                decorationPaint.delete();
+            }
             font.delete();
         });
 
