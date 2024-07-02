@@ -149,14 +149,14 @@ export class TMInput implements IInput {
         let result = -1;
         for (let i = 0; i < this._textMetrics.allCharacter.length; i++) {
             const bound = this._textMetrics.allCharacter[i];
-            const row = this._textMetrics.rows[bound.lineIndex];
+            const row = this._textMetrics.rows[bound.whichRow];
             if (mouseY >= row.top && mouseY <= row.bottom) {
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     result = i;
                     break;
                 } else if (i + 1 <= this._textMetrics.allCharacter.length - 1) {
                     const nextBound = this._textMetrics.allCharacter[i + 1];
-                    if (nextBound.lineIndex !== bound.lineIndex) {
+                    if (nextBound.whichRow !== bound.whichRow) {
                         result = i;
                         break;
                     }
@@ -191,10 +191,10 @@ export class TMInput implements IInput {
         }
         if (this._cursorInfo.characterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
             const nextCharacter = this._textMetrics.allCharacter[0];
-            return { x: 0, y: 0, height: this._textMetrics.rows[nextCharacter.lineIndex].height };
+            return { x: 0, y: 0, height: this._textMetrics.rows[nextCharacter.whichRow].height };
         }
         const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
-        const row = this._textMetrics.rows[character.lineIndex];
+        const row = this._textMetrics.rows[character.whichRow];
         return {
             x: character.x + character.width,
             y: row.top,
@@ -283,11 +283,12 @@ export class TMInput implements IInput {
             ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
             for (let index = targetRange.start; index <= targetRange.end; index++) {
                 const character = this._textMetrics.allCharacter[index];
+                const row = this._textMetrics.rows[character.whichRow];
                 ctx.save();
                 ctx.beginPath();
                 ctx.globalAlpha = this._selectRange!.opacity;
                 ctx.fillStyle = this._selectRange!.color;
-                ctx.fillRect(character.x, character.y, character.width, character.height);
+                ctx.fillRect(character.x, row.top, character.width, row.height);
                 ctx.restore();
             }
         }

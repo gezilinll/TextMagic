@@ -16,7 +16,7 @@ export interface TMCharacterMetrics {
     y: number;
     width: number;
     height: number;
-    lineIndex: number;
+    whichRow: number;
     whichContent: number;
     indexOfContent: number;
     style: TMTextStyle;

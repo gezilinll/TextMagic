@@ -138,54 +138,45 @@ export class TMRenderer implements IRenderer {
         this._paragraph.layout(data.width);
 
         const lineMetrics = this._paragraph.getLineMetrics();
-        const shapedLines = this._paragraph.getShapedLines();
         const rows: TMRowMetrics[] = [];
-        let shapedLineIndex = 0;
-        lineMetrics.forEach((line, index) => {
-            if (line.width > 0) {
-                const shapeLine = shapedLines[shapedLineIndex];
-                rows.push({
-                    width: line.width,
-                    height: line.height,
-                    top: rows.length > 0 ? rows[rows.length - 1].bottom : shapeLine.top,
-                    bottom: shapeLine.bottom,
-                });
-                shapedLineIndex++;
-            } else if (index === 0) {
-                rows.push({ width: 0, height: line.height, top: 0, bottom: line.height });
-            } else {
-                const lastRow = rows[rows.length - 1];
-                rows.push({
-                    top: lastRow.bottom,
-                    bottom: lastRow.bottom + line.height,
-                    width: 0,
-                    height: line.height,
-                });
-            }
+        lineMetrics.forEach((line) => {
+            const lastRow = rows[rows.length - 1];
+            rows.push({
+                width: line.width,
+                height: line.height,
+                top: lastRow ? lastRow.bottom : 0,
+                bottom: lastRow ? lastRow.bottom + line.height : line.height,
+            });
         });
         let rowIndex = 0;
         let characterIndex = 0;
         data.contents.forEach((content, index) => {
             for (let i = 0; i < content.length; i++) {
+                let currentRow = rows[rowIndex];
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
                 if (
                     content[i] === '\n' ||
-                    glyphInfo.graphemeLayoutBounds[1] >= rows[rowIndex].bottom
+                    glyphInfo.graphemeLayoutBounds[1] >=
+                        currentRow.bottom - data.styles[index].fontSize / 10
                 ) {
                     rowIndex++;
                 }
+                currentRow = rows[rowIndex];
                 characterBounds.push({
                     char: content[i],
                     x: content[i] === '\n' ? 0 : glyphInfo.graphemeLayoutBounds[0],
-                    y: content[i] === '\n' ? rows[rowIndex].top : glyphInfo.graphemeLayoutBounds[1],
+                    y: content[i] === '\n' ? currentRow.top : glyphInfo.graphemeLayoutBounds[1],
                     width:
                         content[i] === '\n'
                             ? 0
                             : glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
-                    height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
+                    height:
+                        content[i] === '\n'
+                            ? currentRow.height
+                            : glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
                     whichContent: index,
                     indexOfContent: i,
-                    lineIndex: rowIndex,
+                    whichRow: rowIndex,
                     style: data.styles[index],
                 });
                 characterIndex++;
@@ -230,35 +221,31 @@ export class TMRenderer implements IRenderer {
         strokePaint.setStrokeWidth(3.0);
 
         const lineMetrics = this._paragraph.getLineMetrics();
-        lineMetrics.forEach((line) => {
-            if (line.width === 0) {
-                return;
-            }
-            for (let index = line.startIndex; index < line.endIndex; index++) {
-                const character = this._textMetrics!.allCharacter[index];
-                const font = new CanvasKit.Font(
-                    this._typeFace.get(character.style.fontFamily)!,
-                    character.style.fontSize
-                );
-                font.setEmbolden(character.style.fontWeight !== 'normal');
-                font.setSkewX(character.style.fontStyle !== 'normal' ? -1 / 4 : 0);
-                textPaint.setColor(CanvasKit.parseColorString(character.style.color));
-                this.canvas.drawText(
-                    character.char,
-                    character.x,
-                    character.y + character.height - line.descent,
-                    strokePaint,
-                    font
-                );
-                this.canvas.drawText(
-                    character.char,
-                    character.x,
-                    character.y + character.height - line.descent,
-                    textPaint,
-                    font
-                );
-                font.delete();
-            }
+        this._textMetrics!.allCharacter.forEach((character) => {
+            const font = new CanvasKit.Font(
+                this._typeFace.get(character.style.fontFamily)!,
+                character.style.fontSize
+            );
+            font.setEmbolden(character.style.fontWeight !== 'normal');
+            font.setSkewX(character.style.fontStyle !== 'normal' ? -1 / 4 : 0);
+            textPaint.setColor(CanvasKit.parseColorString(character.style.color));
+            this.canvas.drawText(
+                character.char,
+                character.x,
+                this._textMetrics!.rows[character.whichRow].bottom -
+                    lineMetrics[character.whichRow].descent,
+                strokePaint,
+                font
+            );
+            this.canvas.drawText(
+                character.char,
+                character.x,
+                this._textMetrics!.rows[character.whichRow].bottom -
+                    lineMetrics[character.whichRow].descent,
+                textPaint,
+                font
+            );
+            font.delete();
         });
 
         this.surface.flush();
