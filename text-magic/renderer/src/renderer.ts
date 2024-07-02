@@ -264,6 +264,17 @@ export class TMRenderer implements IRenderer {
             }
 
             textPaint.setColor(CanvasKit.parseColorString(character.style.color));
+            if (character.style.blur) {
+                textPaint.setMaskFilter(
+                    CanvasKit.MaskFilter.MakeBlur(
+                        CanvasKit.BlurStyle.Normal,
+                        0.57735 * character.style.blur.radius + 0.5,
+                        false
+                    )
+                );
+            } else {
+                textPaint.setMaskFilter(null);
+            }
             this.canvas.drawText(
                 character.char,
                 character.x,

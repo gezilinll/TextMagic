@@ -94,6 +94,15 @@
                 enable
             </button>
         </div>
+
+        <div class="input-group-right" style="margin-top: 130px">
+            <label>Text Blur: </label>
+            <br />
+            <button @click="applyStyle({ blur: undefined })">none</button>
+            <button @click="applyStyle({ blur: { radius: 8 } })" style="margin-left: 5px">
+                enable
+            </button>
+        </div>
     </div>
 </template>
 

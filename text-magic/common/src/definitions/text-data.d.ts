@@ -30,6 +30,7 @@ export interface TMTextStyle {
     fontWeight: 'normal' | 'bold';
     stroke?: TMTextStrokeStyle;
     shadow?: TMTextShadowStyle;
+    blur?: TMTextBlurStyle;
 }
 export interface TMTextStrokeStyle {
     color: string;
@@ -39,6 +40,9 @@ export interface TMTextStrokeStyle {
 export interface TMTextShadowStyle {
     color: string;
     blurRadius: number;
+}
+export interface TMTextBlurStyle {
+    radius: number;
 }
 
 export interface TMTextData {
