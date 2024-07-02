@@ -155,7 +155,7 @@ export class TMInput implements IInput {
                     break;
                 } else if (i + 1 <= this._textMetrics.allCharacter.length - 1) {
                     const nextBound = this._textMetrics.allCharacter[i + 1];
-                    if (nextBound.isNewLine || nextBound.y >= bound.y + bound.lineHeight) {
+                    if (nextBound.lineIndex !== bound.lineIndex) {
                         result = i;
                         break;
                     }
@@ -167,8 +167,8 @@ export class TMInput implements IInput {
         }
         const targetBound = this._textMetrics.allCharacter[result];
         return {
-            characterIndex: result,
-            position: mouseX < targetBound.x + targetBound.width / 2 ? 'before' : 'after',
+            characterIndex: mouseX < targetBound.x + targetBound.width / 2 ? result - 1 : result,
+            position: 'after',
         };
     }
 
@@ -184,38 +184,17 @@ export class TMInput implements IInput {
         this._showCursor();
     }
 
-    private _getCursorPosition(): { x: number; y: number; height: number } {
-        if (
-            this._textMetrics.allCharacter.length === 0 ||
-            (this._cursorInfo.characterIndex < 0 && this._cursorInfo.position === 'before')
-        ) {
+    private _getCursorRenderInfo(): { x: number; y: number; height: number } {
+        if (this._textMetrics.allCharacter.length === 0 && this._cursorInfo.characterIndex < 0) {
             return { x: 0, y: 0, height: this._defaultOptions.fontSize };
         }
-        if (
-            (this._cursorInfo.characterIndex === -1 && this._cursorInfo.position === 'after') ||
-            (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'before')
-        ) {
+        if (this._cursorInfo.characterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
             const nextCharacter = this._textMetrics.allCharacter[0];
             return { x: 0, y: 0, height: nextCharacter.lineHeight };
         }
-        if (
-            this._cursorInfo.characterIndex === this._textMetrics.allCharacter.length &&
-            this._cursorInfo.position === 'before'
-        ) {
-            this._cursorInfo.characterIndex = this._textMetrics.allCharacter.length - 1;
-            this._cursorInfo.position = 'after';
-            return this._getCursorPosition();
-        }
         const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
-        if (character.isNewLine && this._cursorInfo.position === 'after') {
-            return {
-                x: 0,
-                y: character.lineTop + character.height,
-                height: character.lineHeight,
-            };
-        }
         return {
-            x: character.x + (this._cursorInfo.position === 'after' ? character.width : 0),
+            x: character.x + character.width,
             y: character.lineTop,
             height: character.lineHeight,
         };
@@ -223,8 +202,7 @@ export class TMInput implements IInput {
 
     private _showCursor() {
         clearTimeout(this._blinkTimer);
-        const bound = this._getCursorPosition();
-
+        const bound = this._getCursorRenderInfo();
         this._cursor.style.left = `${bound.x / this.devicePixelRatio}px`;
         this._cursor.style.top = `${bound.y / this.devicePixelRatio}px`;
         this._cursor.style.height = `${bound.height / this.devicePixelRatio}px`;
@@ -254,13 +232,15 @@ export class TMInput implements IInput {
         if (this._selectRange.start.characterIndex === this._selectRange.end.characterIndex) {
             return { start: -1, end: -1 };
         }
-        const start =
-            this._selectRange.start.characterIndex +
-            (this._selectRange.start.position === 'after' ? 1 : 0);
-        const end =
-            this._selectRange.end.characterIndex +
-            (this._selectRange.end.position === 'after' ? 1 : 0);
-        return { start: Math.min(start, end), end: Math.max(start, end) };
+        const actualStart =
+            this._selectRange.start.characterIndex < this._selectRange.end.characterIndex
+                ? this._selectRange.start
+                : this._selectRange.end;
+        const actualEnd =
+            this._selectRange.start.characterIndex > this._selectRange.end.characterIndex
+                ? this._selectRange.start
+                : this._selectRange.end;
+        return { start: actualStart.characterIndex + 1, end: actualEnd.characterIndex };
     }
 
     private _handleMouseMove(e: MouseEvent) {
@@ -281,7 +261,7 @@ export class TMInput implements IInput {
                         event.offsetY * this.devicePixelRatio
                     );
                     const targetRange = this._getSelectRange();
-                    if (targetRange.end - targetRange.start > 0) {
+                    if (targetRange.start !== -1 && targetRange.end !== -1) {
                         this._hideCursor();
                         this._rangeCanvas.width = this._textMetrics.width * this.devicePixelRatio;
                         this._rangeCanvas.height = this._textMetrics.height * this.devicePixelRatio;
@@ -289,16 +269,20 @@ export class TMInput implements IInput {
                         this._rangeCanvas.style.height = `${this._textMetrics.height}px`;
                         const ctx = this._rangeCanvas.getContext('2d')!;
                         ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
-                        this._textMetrics.allCharacter.forEach((item, index) => {
-                            if (index >= targetRange.start && index < targetRange.end) {
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.globalAlpha = this._selectRange!.opacity;
-                                ctx.fillStyle = this._selectRange!.color;
-                                ctx.fillRect(item.x, item.y, item.width, item.height);
-                                ctx.restore();
-                            }
-                        });
+                        for (let index = targetRange.start; index <= targetRange.end; index++) {
+                            const character = this._textMetrics.allCharacter[index];
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.globalAlpha = this._selectRange!.opacity;
+                            ctx.fillStyle = this._selectRange!.color;
+                            ctx.fillRect(
+                                character.x,
+                                character.y,
+                                character.width,
+                                character.height
+                            );
+                            ctx.restore();
+                        }
                     }
                 },
                 100,
@@ -443,26 +427,11 @@ export class TMInput implements IInput {
         } else {
             let whichContent = 0;
             let indexOfContent = 0;
-            if (
-                (this._cursorInfo.characterIndex < 0 && this._cursorInfo.position === 'before') ||
-                (this._cursorInfo.characterIndex === -1 && this._cursorInfo.position === 'after') ||
-                (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'before')
-            ) {
+            if (this._cursorInfo.characterIndex < 0) {
                 whichContent = 0;
                 indexOfContent = 0;
-            } else if (
-                this._cursorInfo.characterIndex === this._textMetrics.allCharacter.length &&
-                this._cursorInfo.position === 'before'
-            ) {
-                whichContent = this._textData.contents.length - 1;
-                indexOfContent =
-                    this._textData.contents[this._textData.contents.length - 1].length - 1;
             } else {
-                const index =
-                    this._cursorInfo.position === 'before'
-                        ? this._cursorInfo.characterIndex - 1
-                        : this._cursorInfo.characterIndex;
-                const character = this._textMetrics.allCharacter[index];
+                const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
                 whichContent = character.whichContent;
                 indexOfContent = character.indexOfContent;
             }
@@ -492,31 +461,67 @@ export class TMInput implements IInput {
     }
 
     private _delete() {
-        let startIndex = -1;
-        let length = 0;
+        let updated = false;
         const selectRange = this._getSelectRange();
-        if (selectRange.end - selectRange.start > 0) {
-            startIndex = selectRange.start;
-            length = selectRange.end - selectRange.start;
-            this._cursorInfo.characterIndex = selectRange.start;
-            this._cursorInfo.position = 'before';
+        if (selectRange.end !== -1 && selectRange.start !== -1) {
+            updated = true;
+            const startCharacter = this._textMetrics.allCharacter[selectRange.start];
+            const endCharacter =
+                this._textMetrics.allCharacter[
+                    Math.min(selectRange.end, this._textMetrics.allCharacter.length - 1)
+                ];
+            if (startCharacter.whichContent === endCharacter.whichContent) {
+                const content = this._textData.contents[startCharacter.whichContent];
+                this._textData.contents[startCharacter.whichContent] =
+                    content.slice(0, startCharacter.indexOfContent) +
+                    content.slice(endCharacter.indexOfContent + 1);
+                if (this._textData.contents[startCharacter.whichContent].length === 0) {
+                    this._textData.contents.splice(startCharacter.whichContent, 1);
+                    this._textData.styles.splice(startCharacter.whichContent, 1);
+                }
+            } else {
+                const startContent = this._textData.contents[startCharacter.whichContent];
+                this._textData.contents[startCharacter.whichContent] = startContent.slice(
+                    0,
+                    startCharacter.indexOfContent
+                );
+                const endContent = this._textData.contents[endCharacter.whichContent];
+                this._textData.contents[endCharacter.whichContent] = endContent.slice(
+                    endCharacter.indexOfContent
+                );
+                const sliceStart =
+                    this._textData.contents[startCharacter.whichContent].length === 0
+                        ? startCharacter.whichContent
+                        : startCharacter.whichContent + 1;
+                const sliceEnd =
+                    this._textData.contents[endCharacter.whichContent].length === 0
+                        ? startCharacter.whichContent + 1
+                        : startCharacter.whichContent;
+                this._textData.contents.splice(sliceStart, sliceEnd - sliceStart);
+                this._textData.styles.splice(sliceStart, sliceEnd - sliceStart);
+            }
+            this._cursorInfo.characterIndex = selectRange.start - 1;
         } else if (
             (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'after') ||
             this._cursorInfo.characterIndex > 0
         ) {
-            startIndex =
+            updated = true;
+            const index =
                 this._cursorInfo.position === 'after'
                     ? this._cursorInfo.characterIndex
                     : this._cursorInfo.characterIndex - 1;
-            length = 1;
+            const targetCharacter = this._textMetrics.allCharacter[index];
+            const content = this._textData.contents[targetCharacter.whichContent];
+            this._textData.contents[targetCharacter.whichContent] =
+                content.slice(0, targetCharacter.indexOfContent) +
+                content.slice(targetCharacter.indexOfContent + 1);
+            if (this._textData.contents[targetCharacter.whichContent].length === 0) {
+                this._textData.contents.splice(targetCharacter.whichContent, 1);
+                this._textData.styles.splice(targetCharacter.whichContent, 1);
+            }
             this._cursorInfo.characterIndex--;
         }
-        if (length > 0) {
-            const baseCharacter = this._textMetrics.allCharacter[startIndex];
-            const content = this._textData.contents[baseCharacter.whichContent];
-            this._textData.contents[baseCharacter.whichContent] =
-                content.slice(0, baseCharacter.indexOfContent) +
-                content.slice(baseCharacter.indexOfContent + length);
+        if (updated) {
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
             this._hideSelectRange();

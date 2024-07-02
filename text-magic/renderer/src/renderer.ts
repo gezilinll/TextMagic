@@ -101,12 +101,12 @@ export class TMRenderer implements IRenderer {
     }
 
     measure(data: TMTextData) {
-        if (data.contents.length === 0) {
-            return { width: 0, height: 0, allCharacter: [] };
-        }
         if (this._paragraph) {
             this._paragraph.delete();
             this._paragraph = null;
+        }
+        if (data.contents.length === 0) {
+            return { width: 0, height: 0, allCharacter: [] };
         }
         const CanvasKit = this.CanvasKit!;
         const characterBounds: TMCharacterMetrics[] = [];
@@ -137,30 +137,49 @@ export class TMRenderer implements IRenderer {
         this._paragraph.layout(data.width);
 
         const lineMetrics = this._paragraph.getLineMetrics();
-        let currentLineTop = 0;
-        let currentLineBottom = lineMetrics[0].height;
-        let lineIndex = 0;
+        const shapedLines = this._paragraph.getShapedLines();
+        const rows: { top: number; bottom: number }[] = [];
+        let shapedLineIndex = 0;
+        lineMetrics.forEach((line, index) => {
+            if (line.width > 0) {
+                const shapeLine = shapedLines[shapedLineIndex];
+                rows.push({
+                    top: rows.length > 0 ? rows[rows.length - 1].bottom : shapeLine.top,
+                    bottom: shapeLine.bottom,
+                });
+                shapedLineIndex++;
+            } else if (index === 0) {
+                rows.push({ top: 0, bottom: line.height });
+            } else {
+                const lastRow = rows[rows.length - 1];
+                rows.push({ top: lastRow.bottom, bottom: lastRow.bottom + line.height });
+            }
+        });
+        let rowIndex = 0;
         let characterIndex = 0;
         data.contents.forEach((content, index) => {
             for (let i = 0; i < content.length; i++) {
-                let currentLine = lineMetrics[lineIndex];
-                if (content[i] !== '\n' && lineMetrics[lineIndex].endIndex <= characterIndex) {
-                    lineIndex++;
-                    currentLineTop = currentLineBottom;
-                    currentLine = lineMetrics[lineIndex];
-                    currentLineBottom += currentLine.height;
-                }
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
+                if (
+                    content[i] === '\n' ||
+                    glyphInfo.graphemeLayoutBounds[1] >= rows[rowIndex].bottom
+                ) {
+                    rowIndex++;
+                }
                 characterBounds.push({
                     char: content[i],
-                    x: glyphInfo.graphemeLayoutBounds[0],
-                    y: glyphInfo.graphemeLayoutBounds[1],
-                    width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
+                    x: content[i] === '\n' ? 0 : glyphInfo.graphemeLayoutBounds[0],
+                    y: content[i] === '\n' ? rows[rowIndex].top : glyphInfo.graphemeLayoutBounds[1],
+                    width:
+                        content[i] === '\n'
+                            ? 0
+                            : glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                     height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
-                    lineTop: currentLineTop,
-                    lineHeight: currentLine.height,
+                    lineTop: rows[rowIndex].top,
+                    lineHeight: rows[rowIndex].bottom - rows[rowIndex].top,
                     whichContent: index,
                     indexOfContent: i,
+                    lineIndex: rowIndex,
                     style: data.styles[index],
                     isNewLine: content[i] === '\n',
                 });
@@ -179,11 +198,13 @@ export class TMRenderer implements IRenderer {
     }
 
     render() {
+        const CanvasKit = this.CanvasKit!;
+
         if (!this._paragraph || !this._textMetrics) {
+            this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
+            this.surface.flush();
             return;
         }
-
-        const CanvasKit = this.CanvasKit!;
 
         this._canvasElement.width = 300 * window.devicePixelRatio;
         this._canvasElement.height = 300 * window.devicePixelRatio;

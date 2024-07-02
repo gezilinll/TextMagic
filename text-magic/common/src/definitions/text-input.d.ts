@@ -25,7 +25,7 @@ export interface TMTextStyle {
 
 export interface TMCursorInfo {
     characterIndex: number;
-    position: 'before' | 'after';
+    position: 'after';
 }
 
 export interface TMInput {
