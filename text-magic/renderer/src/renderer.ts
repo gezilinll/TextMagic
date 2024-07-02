@@ -214,12 +214,6 @@ export class TMRenderer implements IRenderer {
         const textPaint = new CanvasKit.Paint();
         textPaint.setAntiAlias(true);
         textPaint.setStyle(CanvasKit.PaintStyle.Fill);
-        const strokePaint = new CanvasKit.Paint();
-        strokePaint.setAntiAlias(true);
-        strokePaint.setColor(CanvasKit.Color(255, 0, 0, 1.0)); // 红色
-        strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
-        strokePaint.setStrokeWidth(3.0);
-
         const lineMetrics = this._paragraph.getLineMetrics();
         this._textMetrics!.allCharacter.forEach((character) => {
             const font = new CanvasKit.Font(
@@ -227,16 +221,24 @@ export class TMRenderer implements IRenderer {
                 character.style.fontSize
             );
             font.setEmbolden(character.style.fontWeight !== 'normal');
-            font.setSkewX(character.style.fontStyle !== 'normal' ? -1 / 4 : 0);
+            font.setSkewX(character.style.fontStyle === 'normal' ? 0 : -1 / 4);
+            if (character.style.stroke) {
+                const strokePaint = new CanvasKit.Paint();
+                strokePaint.setAntiAlias(true);
+                strokePaint.setColor(CanvasKit.parseColorString(character.style.stroke.color));
+                strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
+                strokePaint.setStrokeWidth(character.style.stroke.width);
+                this.canvas.drawText(
+                    character.char,
+                    character.x,
+                    this._textMetrics!.rows[character.whichRow].bottom -
+                        lineMetrics[character.whichRow].descent,
+                    strokePaint,
+                    font
+                );
+                strokePaint.delete();
+            }
             textPaint.setColor(CanvasKit.parseColorString(character.style.color));
-            this.canvas.drawText(
-                character.char,
-                character.x,
-                this._textMetrics!.rows[character.whichRow].bottom -
-                    lineMetrics[character.whichRow].descent,
-                strokePaint,
-                font
-            );
             this.canvas.drawText(
                 character.char,
                 character.x,
@@ -251,7 +253,6 @@ export class TMRenderer implements IRenderer {
         this.surface.flush();
 
         textPaint.delete();
-        strokePaint.delete();
     }
 
     isUseDevicePixelRatio(): boolean {

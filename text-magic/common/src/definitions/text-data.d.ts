@@ -28,6 +28,12 @@ export interface TMTextStyle {
     fontFamily: string;
     fontStyle: 'normal' | 'italic';
     fontWeight: 'normal' | 'bold';
+    stroke?: TMTextStrokeStyle;
+}
+export interface TMTextStrokeStyle {
+    color: string;
+    width: number;
+    type: 'inner' | 'outer' | 'center';
 }
 
 export interface TMTextData {

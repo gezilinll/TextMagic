@@ -2,11 +2,11 @@
     <div class="app-container">
         <div class="input-container" ref="root"></div>
 
-        <div class="input-group">
+        <div class="input-group-left">
             <button @click="blurInput">Make Input Blur</button>
         </div>
 
-        <div class="input-group">
+        <div class="input-group-left">
             <label for="fontSize">Font Size (px): </label>
             <input
                 v-model.number="fontSize"
@@ -15,9 +15,10 @@
                 name="fontSize"
                 min="1"
                 max="100"
+                style="margin-left: 8px"
             />
         </div>
-        <div class="input-group">
+        <div class="input-group-left">
             <label for="colorR">Font Color (R):</label>
             <input
                 v-model.number="fontColorR"
@@ -26,9 +27,10 @@
                 name="colorR"
                 min="0"
                 max="255"
+                style="margin-left: 8px"
             />
         </div>
-        <div class="input-group">
+        <div class="input-group-left">
             <label for="colorG">Font Color (G):</label>
             <input
                 v-model.number="fontColorG"
@@ -37,9 +39,10 @@
                 name="colorG"
                 min="0"
                 max="255"
+                style="margin-left: 8px"
             />
         </div>
-        <div class="input-group">
+        <div class="input-group-left">
             <label for="colorB">Font Color (B):</label>
             <input
                 v-model.number="fontColorB"
@@ -48,19 +51,36 @@
                 name="colorB"
                 min="0"
                 max="255"
+                style="margin-left: 8px"
             />
         </div>
-        <div class="input-group">
+        <div class="input-group-left">
             <label>Font Style: </label>
             <br />
             <button @click="applyStyle({ fontStyle: 'normal' })">normal</button>
-            <button @click="applyStyle({ fontStyle: 'italic' })">italic</button>
+            <button @click="applyStyle({ fontStyle: 'italic' })" style="margin-left: 8px">
+                italic
+            </button>
         </div>
-        <div class="input-group">
+        <div class="input-group-left">
             <label>Font Weight: </label>
             <br />
             <button @click="applyStyle({ fontWeight: 'normal' })">normal</button>
-            <button @click="applyStyle({ fontWeight: 'bold' })">bold</button>
+            <button @click="applyStyle({ fontWeight: 'bold' })" style="margin-left: 8px">
+                bold
+            </button>
+        </div>
+
+        <div class="input-group-right">
+            <label>Stroke Type: </label>
+            <br />
+            <button @click="applyStyle({ stroke: undefined })">none</button>
+            <button
+                @click="applyStyle({ stroke: { type: 'center', width: 4, color: '#ff0000' } })"
+                style="margin-left: 8px"
+            >
+                center
+            </button>
         </div>
     </div>
 </template>
@@ -169,9 +189,17 @@ body {
     background-color: rgb(255, 255, 255);
 }
 
-.input-group {
+.input-group-left {
     margin-top: 16px;
     margin-bottom: 10px;
     margin-left: 6px;
+}
+
+.input-group-right {
+    position: absolute;
+    top: 0px;
+    right: 80px;
+    margin-top: 16px;
+    margin-bottom: 10px;
 }
 </style>
