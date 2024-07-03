@@ -27,6 +27,8 @@ export interface TMInput {
 
     getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo;
 
+    changeSize(width: number, height: number): void;
+
     changeTextAlign(align: 'left' | 'right' | 'center'): void;
 
     applyStyle(style: Partial<TMTextStyle>): void;

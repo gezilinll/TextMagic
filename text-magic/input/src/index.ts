@@ -58,7 +58,10 @@ export class TMInput implements IInput {
         this._textArea = document.createElement('textarea');
         this._textArea.style.position = 'absolute';
         this._textArea.style.left = '0px';
+        this._textArea.style.top = '0px';
         this._textArea.style.zIndex = '-9999';
+        this._textArea.style.width = '0px';
+        this._textArea.style.height = '0px';
         this._textArea.addEventListener('input', (event) => {
             this._handleInput(event as InputEvent);
         });
@@ -97,6 +100,7 @@ export class TMInput implements IInput {
         this._rangeCanvas = document.createElement('canvas');
         this._rangeCanvas.style.position = 'absolute';
         this._rangeCanvas.style.left = '0px';
+        this._rangeCanvas.style.top = '0px';
 
         this._textMetrics = { width: 0, height: 0, allCharacter: [], rows: [] };
         this._cursorInfo = this.getCursorByCoordinate(0, 0);
@@ -230,7 +234,7 @@ export class TMInput implements IInput {
             } else if (this._textData.textAlign === 'center') {
                 return this._textData.width / 2;
             } else {
-                return this._textData.width;
+                return this._textData.width - 1;
             }
         };
 
@@ -358,10 +362,10 @@ export class TMInput implements IInput {
         const targetRange = this._getSelectRange();
         if (targetRange.start !== -1 && targetRange.end !== -1) {
             this._hideCursor();
-            this._rangeCanvas.width = this._textMetrics.width * this.devicePixelRatio;
-            this._rangeCanvas.height = this._textMetrics.height * this.devicePixelRatio;
-            this._rangeCanvas.style.width = `${this._textMetrics.width}px`;
-            this._rangeCanvas.style.height = `${this._textMetrics.height}px`;
+            this._rangeCanvas.width = this._textData.width * this.devicePixelRatio;
+            this._rangeCanvas.height = this._textData.height * this.devicePixelRatio;
+            this._rangeCanvas.style.width = `${this._textData.width}px`;
+            this._rangeCanvas.style.height = `${this._textData.height}px`;
             const ctx = this._rangeCanvas.getContext('2d')!;
             ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
             for (let index = targetRange.start; index <= targetRange.end; index++) {
@@ -393,10 +397,23 @@ export class TMInput implements IInput {
         this._isMouseDown = false;
     }
 
+    changeSize(width: number, height: number): void {
+        this._textData.width = width;
+        this._textData.height = height;
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render(width, height);
+        const range = this._getSelectRange();
+        if (range.start !== -1 && range.end !== -1) {
+            this._showSelectRange();
+        } else if (this._isCursorShowing()) {
+            this._showCursor();
+        }
+    }
+
     changeTextAlign(align: 'left' | 'right' | 'center'): void {
         this._textData.textAlign = align;
         this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render();
+        this.renderer.render(this._textData.width, this._textData.height);
         const range = this._getSelectRange();
         if (range.start !== -1 && range.end !== -1) {
             this._showSelectRange();
@@ -474,7 +491,7 @@ export class TMInput implements IInput {
                 );
             }
             this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
+            this.renderer.render(this._textData.width, this._textData.height);
             this._showSelectRange();
         } else if (this._isCursorShowing()) {
             //TODO
@@ -483,7 +500,7 @@ export class TMInput implements IInput {
                 Object.assign(styleItem, style);
             });
             this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
+            this.renderer.render(this._textData.width, this._textData.height);
         }
     }
 
@@ -505,7 +522,7 @@ export class TMInput implements IInput {
 
             this._insertToContentAtCursorPosition(data);
             this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
+            this.renderer.render(this._textData.width, this._textData.height);
             this._cursorInfo.afterCharacterIndex += data.length;
             this._hideSelectRange();
             this._showCursor();
@@ -559,7 +576,7 @@ export class TMInput implements IInput {
     private _newLine() {
         this._insertToContentAtCursorPosition('\n');
         this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render();
+        this.renderer.render(this._textData.width, this._textData.height);
         this._cursorInfo.afterCharacterIndex++;
         this._hideSelectRange();
         this._showCursor();
@@ -619,7 +636,7 @@ export class TMInput implements IInput {
         }
         if (updated) {
             this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render();
+            this.renderer.render(this._textData.width, this._textData.height);
             this._hideSelectRange();
             this._showCursor();
         }

@@ -27,6 +27,10 @@ export class MagicInput {
         this._input.blur();
     }
 
+    changeSize(width: number, height: number): void {
+        this._input.changeSize(width, height);
+    }
+
     changeTextAlign(align: 'left' | 'right' | 'center') {
         this._input.changeTextAlign(align);
     }

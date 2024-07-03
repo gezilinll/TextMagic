@@ -274,6 +274,9 @@ onMounted(async () => {
 
     await input.init();
 
+    const bound = root.value!.getBoundingClientRect();
+    input.changeSize(bound.width, bound.height);
+
     const defaultFont = await getDefaultFont();
     input.registerFont(defaultFont);
 

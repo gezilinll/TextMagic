@@ -35,8 +35,13 @@ export class TMRenderer implements IRenderer {
         this._container = document.createElement('div');
 
         this._canvasElement = document.createElement('canvas');
+        this._canvasElement.style.position = 'absolute';
+        this._canvasElement.style.left = '0px';
+        this._canvasElement.style.top = '0px';
         this._container.appendChild(this._canvasElement);
-        this._container.style.position = 'absolute';
+        this._container.style.position = 'relative';
+        this._container.style.left = '0px';
+        this._container.style.top = '0px';
     }
 
     async init(): Promise<boolean> {
@@ -218,8 +223,14 @@ export class TMRenderer implements IRenderer {
         return this._textMetrics;
     }
 
-    render() {
+    render(width: number, height: number) {
         const CanvasKit = this.CanvasKit!;
+        this._container.style.width = `${width}px`;
+        this._container.style.height = `${height}px`;
+        this._canvasElement.width = width * window.devicePixelRatio;
+        this._canvasElement.height = height * window.devicePixelRatio;
+        this._canvasElement.style.width = `${width}px`;
+        this._canvasElement.style.height = `${height}px`;
 
         if (!this._paragraph || !this._textMetrics) {
             this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
@@ -227,10 +238,6 @@ export class TMRenderer implements IRenderer {
             return;
         }
 
-        this._canvasElement.width = this._paragraph.getMaxWidth() * window.devicePixelRatio;
-        this._canvasElement.height = this._paragraph.getHeight() * window.devicePixelRatio;
-        this._canvasElement.style.width = `${this._paragraph.getMaxWidth()}px`;
-        this._canvasElement.style.height = `${this._paragraph.getHeight()}px`;
         this._surface = CanvasKit.MakeCanvasSurface(this._canvasElement)!;
         this._canvas = this._surface.getCanvas();
         this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));

@@ -14,7 +14,7 @@ export interface TMRenderer {
 
     measure(data: TMTextData): TMTextMetrics;
 
-    render();
+    render(width: number, height: number);
 
     isUseDevicePixelRatio(): boolean;
 
