@@ -161,7 +161,7 @@ export class TMRenderer implements IRenderer {
             builder.pop();
         });
         this._paragraph = builder.build();
-        this._paragraph.layout(data.width);
+        this._paragraph.layout(data.width * window.devicePixelRatio);
 
         const lineMetrics = this._paragraph.getLineMetrics();
         const rows: TMRowMetrics[] = [];
@@ -193,11 +193,15 @@ export class TMRenderer implements IRenderer {
                     currentRow.startIndex = characterIndex;
                 }
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
-                const offsetY = lastCharacterIsNewLine
-                    ? data.paragraphSpacing * (rowIndex + 1)
-                    : rowIndex > 0
-                    ? data.paragraphSpacing * rowIndex
-                    : 0;
+
+                let offsetY = data.paragraphSpacing * rowIndex;
+                if (
+                    lastCharacterIsNewLine ||
+                    offsetY + glyphInfo.graphemeLayoutBounds[1] >=
+                        currentRow.bottom - data.styles[index].fontSize / 10
+                ) {
+                    offsetY = data.paragraphSpacing * (rowIndex + 1);
+                }
                 if (
                     lastCharacterIsNewLine ||
                     offsetY + glyphInfo.graphemeLayoutBounds[1] >=
