@@ -285,24 +285,41 @@ export class TMRenderer implements IRenderer {
         textPaint.setAntiAlias(true);
         textPaint.setStyle(CanvasKit.PaintStyle.Fill);
         const lineMetrics = this._paragraph.getLineMetrics();
+        const highlighted: Set<number> = new Set();
+        let characterIndex = 0;
         this._textMetrics!.allCharacter.forEach((character) => {
+            if (character.char === '\n') {
+                characterIndex++;
+                return;
+            }
             const drawTextY =
                 character.y + character.height - lineMetrics[character.whichRow].descent;
             const row = this._textMetrics!.rows[character.whichRow];
             if (character.style.highlight) {
-                const highlightPaint = new CanvasKit.Paint();
-                highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
-                highlightPaint.setColor(
-                    CanvasKit.parseColorString(character.style.highlight.color)
-                );
-                this.canvas.drawRect4f(
-                    character.x,
-                    row.contentTop,
-                    character.x + character.width,
-                    row.contentTop + row.contentHeight,
-                    highlightPaint
-                );
-                highlightPaint.delete();
+                if (!highlighted.has(characterIndex)) {
+                    const highlightPaint = new CanvasKit.Paint();
+                    highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
+                    highlightPaint.setColor(
+                        CanvasKit.parseColorString(character.style.highlight.color)
+                    );
+                    let endCharacter = character;
+                    for (let index = characterIndex; index <= row.endIndex; index++) {
+                        if (this._textMetrics!.allCharacter[index].style.highlight) {
+                            highlighted.add(index);
+                            endCharacter = this._textMetrics!.allCharacter[index];
+                        } else {
+                            break;
+                        }
+                    }
+                    this.canvas.drawRect4f(
+                        character.x,
+                        row.contentTop,
+                        endCharacter.x + endCharacter.width,
+                        row.contentTop + row.contentHeight,
+                        highlightPaint
+                    );
+                    highlightPaint.delete();
+                }
             }
 
             const font = new CanvasKit.Font(
@@ -396,6 +413,7 @@ export class TMRenderer implements IRenderer {
                 decorationPaint.delete();
             }
             font.delete();
+            characterIndex++;
         });
 
         this.surface.flush();
