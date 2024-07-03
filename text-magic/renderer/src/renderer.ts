@@ -167,11 +167,18 @@ export class TMRenderer implements IRenderer {
         const rows: TMRowMetrics[] = [];
         lineMetrics.forEach((line) => {
             const lastRow = rows[rows.length - 1];
+            const top = lastRow ? lastRow.bottom : 0;
+            const bottom = lastRow ? top + line.height + data.paragraphSpacing : line.height;
+            const contentTop = lastRow ? top + data.paragraphSpacing : 0;
+            const contentBottom = contentTop + line.height;
             rows.push({
                 width: line.width,
-                height: line.height,
-                top: lastRow ? lastRow.bottom : 0,
-                bottom: lastRow ? lastRow.bottom + line.height : line.height,
+                height: bottom - top,
+                contentHeight: line.height,
+                top,
+                contentTop,
+                bottom,
+                contentBottom,
                 startIndex: -1,
                 endIndex: -1,
             });
@@ -186,9 +193,14 @@ export class TMRenderer implements IRenderer {
                     currentRow.startIndex = characterIndex;
                 }
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
+                const offsetY = lastCharacterIsNewLine
+                    ? data.paragraphSpacing * (rowIndex + 1)
+                    : rowIndex > 0
+                    ? data.paragraphSpacing * rowIndex
+                    : 0;
                 if (
                     lastCharacterIsNewLine ||
-                    glyphInfo.graphemeLayoutBounds[1] >=
+                    offsetY + glyphInfo.graphemeLayoutBounds[1] >=
                         currentRow.bottom - data.styles[index].fontSize / 10
                 ) {
                     currentRow.endIndex = characterIndex - 1;
@@ -200,7 +212,7 @@ export class TMRenderer implements IRenderer {
                 characterBounds.push({
                     char: content[i],
                     x: glyphInfo.graphemeLayoutBounds[0],
-                    y: glyphInfo.graphemeLayoutBounds[1],
+                    y: offsetY + glyphInfo.graphemeLayoutBounds[1],
                     width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
                     height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
                     whichContent: index,
@@ -216,8 +228,8 @@ export class TMRenderer implements IRenderer {
 
         this._textMetrics = {
             rows,
-            width: this._paragraph.getMaxWidth(),
-            height: this._paragraph.getHeight(),
+            width: data.width,
+            height: data.height,
             allCharacter: characterBounds,
         };
 
@@ -251,6 +263,7 @@ export class TMRenderer implements IRenderer {
         this._textMetrics!.allCharacter.forEach((character) => {
             const drawTextY =
                 character.y + character.height - lineMetrics[character.whichRow].descent;
+            const row = this._textMetrics!.rows[character.whichRow];
             if (character.style.highlight) {
                 const highlightPaint = new CanvasKit.Paint();
                 highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
@@ -259,9 +272,9 @@ export class TMRenderer implements IRenderer {
                 );
                 this.canvas.drawRect4f(
                     character.x,
-                    this._textMetrics!.rows[character.whichRow].top,
+                    row.contentTop,
                     character.x + character.width,
-                    this._textMetrics!.rows[character.whichRow].height,
+                    row.contentTop + row.contentHeight,
                     highlightPaint
                 );
                 highlightPaint.delete();
@@ -367,10 +380,6 @@ export class TMRenderer implements IRenderer {
 
     isUseDevicePixelRatio(): boolean {
         return true;
-    }
-
-    notifyDevicePixelRatioChanged() {
-        this.render();
     }
 
     destroy() {}

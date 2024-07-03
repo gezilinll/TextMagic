@@ -18,7 +18,5 @@ export interface TMRenderer {
 
     isUseDevicePixelRatio(): boolean;
 
-    notifyDevicePixelRatioChanged();
-
     destroy();
 }

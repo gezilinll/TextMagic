@@ -7,8 +7,11 @@ export interface TMTextMetrics {
 export interface TMRowMetrics {
     width: number;
     height: number;
+    contentHeight: number;
     top: number;
+    contentTop: number;
     bottom: number;
+    contentBottom: number;
     startIndex: number;
     endIndex: number;
 }
@@ -64,6 +67,7 @@ export interface TMTextData {
     width: number;
     height: number;
     textAlign: 'left' | 'right' | 'center';
+    paragraphSpacing: number;
     contents: string[];
     styles: TMTextStyle[];
 }

@@ -8,6 +8,7 @@ export interface TMInputOptions {
     fontColor: string;
     fontFamily: string;
     textAlign: 'left' | 'right' | 'center';
+    paragraphSpacing: number;
 }
 
 export interface TMSelectRange {
@@ -30,6 +31,8 @@ export interface TMInput {
     changeSize(width: number, height: number): void;
 
     changeTextAlign(align: 'left' | 'right' | 'center'): void;
+
+    changeParagraphSpacing(spacing: number): void;
 
     applyStyle(style: Partial<TMTextStyle>): void;
 

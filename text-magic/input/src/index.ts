@@ -36,6 +36,7 @@ export class TMInput implements IInput {
             fontColor: '#000000',
             fontFamily: 'Yahei',
             textAlign: 'left',
+            paragraphSpacing: 0,
             width: 260,
             height: 200,
         };
@@ -44,6 +45,7 @@ export class TMInput implements IInput {
             width: this._defaultOptions.width,
             height: this._defaultOptions.height,
             textAlign: this._defaultOptions.textAlign,
+            paragraphSpacing: this._defaultOptions.paragraphSpacing,
             contents: [],
             styles: [],
         };
@@ -249,7 +251,7 @@ export class TMInput implements IInput {
             return {
                 x: getXBeforeZeroOrNewLine(nextCharacter),
                 y: 0,
-                height: this._textMetrics.rows[nextCharacter.whichRow].height,
+                height: this._textMetrics.rows[nextCharacter.whichRow].contentHeight,
             };
         }
 
@@ -265,12 +267,15 @@ export class TMInput implements IInput {
                               ]
                           )
                         : character.x + character.width,
-                y: character.char === '\n' ? row.bottom : row.top,
+                y:
+                    character.char === '\n'
+                        ? row.bottom + this._textData.paragraphSpacing
+                        : row.contentTop,
                 height:
                     character.char === '\n' &&
                     character.whichRow + 1 <= this._textMetrics.rows.length - 1
-                        ? this._textMetrics.rows[character.whichRow + 1].height
-                        : row.height,
+                        ? this._textMetrics.rows[character.whichRow + 1].contentHeight
+                        : row.contentHeight,
             };
         } else {
             const nextCharacter =
@@ -278,8 +283,8 @@ export class TMInput implements IInput {
             const row = this._textMetrics.rows[nextCharacter.whichRow];
             return {
                 x: nextCharacter.x,
-                y: row.top,
-                height: row.height,
+                y: row.contentTop,
+                height: row.contentHeight,
             };
         }
     }
@@ -375,7 +380,7 @@ export class TMInput implements IInput {
                 ctx.beginPath();
                 ctx.globalAlpha = this._selectRange!.opacity;
                 ctx.fillStyle = this._selectRange!.color;
-                ctx.fillRect(character.x, row.top, character.width, row.height);
+                ctx.fillRect(character.x, row.contentTop, character.width, row.contentHeight);
                 ctx.restore();
             }
         }
@@ -397,21 +402,7 @@ export class TMInput implements IInput {
         this._isMouseDown = false;
     }
 
-    changeSize(width: number, height: number): void {
-        this._textData.width = width;
-        this._textData.height = height;
-        this._textMetrics = this.renderer.measure(this._textData);
-        this.renderer.render(width, height);
-        const range = this._getSelectRange();
-        if (range.start !== -1 && range.end !== -1) {
-            this._showSelectRange();
-        } else if (this._isCursorShowing()) {
-            this._showCursor();
-        }
-    }
-
-    changeTextAlign(align: 'left' | 'right' | 'center'): void {
-        this._textData.textAlign = align;
+    private _refresh() {
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render(this._textData.width, this._textData.height);
         const range = this._getSelectRange();
@@ -420,6 +411,22 @@ export class TMInput implements IInput {
         } else if (this._isCursorShowing()) {
             this._showCursor();
         }
+    }
+
+    changeSize(width: number, height: number): void {
+        this._textData.width = width;
+        this._textData.height = height;
+        this._refresh();
+    }
+
+    changeTextAlign(align: 'left' | 'right' | 'center'): void {
+        this._textData.textAlign = align;
+        this._refresh();
+    }
+
+    changeParagraphSpacing(spacing: number) {
+        this._textData.paragraphSpacing = spacing;
+        this._refresh();
     }
 
     applyStyle(style: Partial<TMTextStyle>) {
@@ -509,7 +516,7 @@ export class TMInput implements IInput {
             this._hideSelectRange();
             this._hideCursor();
             this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.notifyDevicePixelRatioChanged();
+            this.renderer.render(this._textData.width, this._textData.height);
         }
     }
 

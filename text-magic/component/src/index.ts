@@ -35,6 +35,10 @@ export class MagicInput {
         this._input.changeTextAlign(align);
     }
 
+    changeParagraphSpacing(spacing: number) {
+        this._input.changeParagraphSpacing(spacing);
+    }
+
     applyStyle(style: Partial<TMTextStyle>) {
         this._input.applyStyle(style);
     }

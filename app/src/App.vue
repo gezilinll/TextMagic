@@ -79,6 +79,18 @@
             />
         </div>
         <div class="input-group-left">
+            <label for="colorB">Paragraph Spacing:</label>
+            <input
+                v-model.number="paragraphSpacing"
+                type="number"
+                id="lineHeight"
+                name="lineHeight"
+                min="0"
+                max="50"
+                style="margin-left: 8px"
+            />
+        </div>
+        <div class="input-group-left">
             <label>Font Style: </label>
             <br />
             <button @click="applyStyle({ fontStyle: 'normal' })">normal</button>
@@ -271,6 +283,14 @@ watch(
     }
 );
 
+const paragraphSpacing = ref(0);
+watch(
+    () => paragraphSpacing.value,
+    () => {
+        input.changeParagraphSpacing(paragraphSpacing.value);
+    }
+);
+
 function preventDefault(e: Event) {
     e.preventDefault();
 }
@@ -306,6 +326,7 @@ const input = new MagicInput({
     fontSize: fontSize.value,
     fontFamily: 'Roboto',
     textAlign: 'left',
+    paragraphSpacing: 0,
 });
 
 onMounted(async () => {
