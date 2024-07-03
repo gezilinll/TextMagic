@@ -55,6 +55,30 @@
             />
         </div>
         <div class="input-group-left">
+            <label for="colorB">Letter Spacing:</label>
+            <input
+                v-model.number="letterSpacing"
+                type="number"
+                id="letterSpacing"
+                name="letterSpacing"
+                min="-20"
+                max="20"
+                style="margin-left: 8px"
+            />
+        </div>
+        <div class="input-group-left">
+            <label for="colorB">Line Height(%):</label>
+            <input
+                v-model.number="lineHeight"
+                type="number"
+                id="lineHeight"
+                name="lineHeight"
+                min="100"
+                max="300"
+                style="margin-left: 8px"
+            />
+        </div>
+        <div class="input-group-left">
             <label>Font Style: </label>
             <br />
             <button @click="applyStyle({ fontStyle: 'normal' })">normal</button>
@@ -143,24 +167,6 @@
                 line-through-solid
             </button>
         </div>
-        <div class="input-group-left">
-            <label>Text Highlight: </label>
-            <br />
-            <button @click="applyStyle({ highlight: undefined })">none</button>
-            <br />
-            <button
-                @click="
-                    applyStyle({
-                        highlight: {
-                            color: '#DAFF00',
-                        },
-                    })
-                "
-                style="margin-top: 2px"
-            >
-                enable
-            </button>
-        </div>
 
         <div class="input-group-right" style="margin-top: 30px">
             <label>Text Align: </label>
@@ -205,6 +211,23 @@
                 enable
             </button>
         </div>
+        <div class="input-group-right" style="margin-top: 320px">
+            <label>Text Highlight: </label>
+            <br />
+            <button @click="applyStyle({ highlight: undefined })">none</button>
+            <button
+                @click="
+                    applyStyle({
+                        highlight: {
+                            color: '#DAFF00',
+                        },
+                    })
+                "
+                style="margin-left: 5px"
+            >
+                enable
+            </button>
+        </div>
     </div>
 </template>
 
@@ -229,6 +252,22 @@ watch(
     () => [fontColorR.value, fontColorG.value, fontColorB.value],
     () => {
         applyStyle({ color: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value) });
+    }
+);
+
+const letterSpacing = ref(0);
+watch(
+    () => letterSpacing.value,
+    () => {
+        applyStyle({ letterSpacing: letterSpacing.value });
+    }
+);
+
+const lineHeight = ref(100);
+watch(
+    () => lineHeight.value,
+    () => {
+        applyStyle({ lineHeight: lineHeight.value / 100.0 });
     }
 );
 

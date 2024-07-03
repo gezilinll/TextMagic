@@ -152,6 +152,8 @@ export class TMRenderer implements IRenderer {
                 color: CanvasKit.parseColorString(style.color),
                 fontFamilies: [style.fontFamily],
                 fontSize: style.fontSize,
+                letterSpacing: style.letterSpacing,
+                heightMultiplier: style.lineHeight,
                 fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             });
             builder.pushStyle(textStyle);
@@ -247,6 +249,8 @@ export class TMRenderer implements IRenderer {
         textPaint.setStyle(CanvasKit.PaintStyle.Fill);
         const lineMetrics = this._paragraph.getLineMetrics();
         this._textMetrics!.allCharacter.forEach((character) => {
+            const drawTextY =
+                character.y + character.height - lineMetrics[character.whichRow].descent;
             if (character.style.highlight) {
                 const highlightPaint = new CanvasKit.Paint();
                 highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
@@ -283,14 +287,7 @@ export class TMRenderer implements IRenderer {
                     shadowPaint.setStyle(CanvasKit.PaintStyle.Stroke);
                     shadowPaint.setStrokeWidth(character.style.stroke.width);
                 }
-                this.canvas.drawText(
-                    character.char,
-                    character.x,
-                    this._textMetrics!.rows[character.whichRow].bottom -
-                        lineMetrics[character.whichRow].descent,
-                    shadowPaint,
-                    font
-                );
+                this.canvas.drawText(character.char, character.x, drawTextY, shadowPaint, font);
                 shadowPaint.delete();
             }
             if (character.style.stroke) {
@@ -299,14 +296,7 @@ export class TMRenderer implements IRenderer {
                 strokePaint.setColor(CanvasKit.parseColorString(character.style.stroke.color));
                 strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
                 strokePaint.setStrokeWidth(character.style.stroke.width);
-                this.canvas.drawText(
-                    character.char,
-                    character.x,
-                    this._textMetrics!.rows[character.whichRow].bottom -
-                        lineMetrics[character.whichRow].descent,
-                    strokePaint,
-                    font
-                );
+                this.canvas.drawText(character.char, character.x, drawTextY, strokePaint, font);
                 strokePaint.delete();
             }
 
@@ -322,14 +312,7 @@ export class TMRenderer implements IRenderer {
             } else {
                 textPaint.setMaskFilter(null);
             }
-            this.canvas.drawText(
-                character.char,
-                character.x,
-                this._textMetrics!.rows[character.whichRow].bottom -
-                    lineMetrics[character.whichRow].descent,
-                textPaint,
-                font
-            );
+            this.canvas.drawText(character.char, character.x, drawTextY, textPaint, font);
             if (character.style.decoration) {
                 const decorationPaint = new CanvasKit.Paint();
                 decorationPaint.setAntiAlias(true);
@@ -343,8 +326,9 @@ export class TMRenderer implements IRenderer {
                 let yPosition = 0;
                 if (character.style.decoration.line === 'underline') {
                     yPosition =
-                        this._textMetrics!.rows[character.whichRow].bottom -
-                        character.style.decoration.thickness;
+                        drawTextY +
+                        lineMetrics[character.whichRow].descent -
+                        character.style.decoration.thickness / 2;
                 } else {
                     yPosition =
                         character.y +

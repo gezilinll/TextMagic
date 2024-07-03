@@ -30,6 +30,8 @@ export interface TMTextStyle {
     fontFamily: string;
     fontStyle: 'normal' | 'italic';
     fontWeight: 'normal' | 'bold';
+    letterSpacing?: number;
+    lineHeight?: number;
     decoration?: TMTextDecorationStyle;
     stroke?: TMTextStrokeStyle;
     shadow?: TMTextShadowStyle;
