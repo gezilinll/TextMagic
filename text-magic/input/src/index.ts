@@ -413,6 +413,10 @@ export class TMInput implements IInput {
     private _refresh() {
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render(this._textData.width, this._textData.height);
+        this._refreshInput();
+    }
+
+    private _refreshInput() {
         const range = this._getSelectRange();
         if (range.start !== -1 && range.end !== -1) {
             this._showSelectRange();
@@ -585,6 +589,21 @@ export class TMInput implements IInput {
         } else if (e.code === 'Backspace') {
             this._delete();
             e.preventDefault();
+        } else if (
+            e.code === 'ArrowUp' ||
+            e.code === 'ArrowDown' ||
+            e.code === 'ArrowLeft' ||
+            e.code === 'ArrowRight'
+        ) {
+            this._arrow(e);
+            e.preventDefault();
+        } else if (e.code === 'KeyA' && e.metaKey) {
+            this._selectAll();
+            e.preventDefault();
+        } else if (e.code === 'KeyA' && e.metaKey) {
+            this._copy();
+        } else if (e.code === 'KeyA' && e.metaKey) {
+            this._paste();
         }
     }
 
@@ -656,6 +675,78 @@ export class TMInput implements IInput {
             this._showCursor();
         }
     }
+
+    private _arrow(e: KeyboardEvent) {
+        const selectRange = this._getSelectRange();
+        const rangeIsValid = selectRange.start !== -1 && selectRange.end !== -1;
+        if (e.code === 'ArrowUp') {
+            if (rangeIsValid) {
+                this._cursorInfo = {
+                    afterCharacterIndex: selectRange.start - 1,
+                    cursorPosition: 'after-index',
+                };
+                this._hideSelectRange();
+            }
+            const renderInfo = this._getCursorRenderInfo();
+            if (renderInfo.y > 0) {
+                this._cursorInfo = this.getCursorByCoordinate(renderInfo.x, renderInfo.y - 2);
+            }
+            this._showCursor();
+        } else if (e.code === 'ArrowDown') {
+            if (rangeIsValid) {
+                this._cursorInfo = {
+                    afterCharacterIndex: selectRange.end,
+                    cursorPosition: 'after-index',
+                };
+                this._hideSelectRange();
+            }
+            const renderInfo = this._getCursorRenderInfo();
+            this._cursorInfo = this.getCursorByCoordinate(
+                renderInfo.x,
+                renderInfo.y + renderInfo.height + 2
+            );
+            this._showCursor();
+        } else if (e.code === 'ArrowRight') {
+            if (rangeIsValid) {
+                this._cursorInfo = {
+                    afterCharacterIndex: selectRange.end - 1,
+                    cursorPosition: 'after-index',
+                };
+                this._hideSelectRange();
+            }
+            if (this._textMetrics.allCharacter.length > this._cursorInfo.afterCharacterIndex + 1) {
+                this._cursorInfo.afterCharacterIndex++;
+                this._showCursor();
+            }
+        } else if (e.code === 'ArrowLeft') {
+            if (rangeIsValid) {
+                this._cursorInfo = {
+                    afterCharacterIndex: selectRange.start,
+                    cursorPosition: 'after-index',
+                };
+                this._hideSelectRange();
+            }
+            if (this._cursorInfo.afterCharacterIndex >= 0) {
+                this._cursorInfo.afterCharacterIndex--;
+                this._showCursor();
+            }
+        }
+    }
+
+    private _selectAll() {
+        if (this._textMetrics.allCharacter.length > 0) {
+            this._selectRange.start = { afterCharacterIndex: -1, cursorPosition: 'after-index' };
+            this._selectRange.end = {
+                afterCharacterIndex: this._textMetrics.allCharacter.length - 1,
+                cursorPosition: 'after-index',
+            };
+            this._showSelectRange();
+        }
+    }
+
+    private _copy() {}
+
+    private _paste() {}
 
     private _isCursorShowing() {
         return this._cursor.style.display === 'block';
