@@ -140,7 +140,7 @@ export class TMRenderer implements IRenderer {
             textStyle: {
                 color: CanvasKit.parseColorString(style.color),
                 fontFamilies: [style.fontFamily],
-                fontSize: style.fontSize,
+                fontSize: style.fontSize * window.devicePixelRatio,
                 fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             },
             textAlign: this._convertToTextAlign(data.textAlign),
@@ -151,7 +151,7 @@ export class TMRenderer implements IRenderer {
             const textStyle = new CanvasKit.TextStyle({
                 color: CanvasKit.parseColorString(style.color),
                 fontFamilies: [style.fontFamily],
-                fontSize: style.fontSize,
+                fontSize: style.fontSize * window.devicePixelRatio,
                 letterSpacing: style.letterSpacing,
                 heightMultiplier: style.lineHeight,
                 fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
@@ -282,7 +282,7 @@ export class TMRenderer implements IRenderer {
 
             const font = new CanvasKit.Font(
                 this._typeFace.get(character.style.fontFamily)!,
-                character.style.fontSize
+                character.style.fontSize * window.devicePixelRatio
             );
             font.setEmbolden(character.style.fontWeight !== 'normal');
             font.setSkewX(character.style.fontStyle === 'normal' ? 0 : -1 / 4);

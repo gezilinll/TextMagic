@@ -244,7 +244,11 @@ export class TMInput implements IInput {
             this._textMetrics.allCharacter.length === 0 &&
             this._cursorInfo.afterCharacterIndex < 0
         ) {
-            return { x: getXBeforeZeroOrNewLine(), y: 0, height: this._defaultOptions.fontSize };
+            return {
+                x: getXBeforeZeroOrNewLine(),
+                y: 0,
+                height: this._defaultOptions.fontSize * this.devicePixelRatio,
+            };
         }
         if (this._cursorInfo.afterCharacterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
             const nextCharacter = this._textMetrics.allCharacter[0];

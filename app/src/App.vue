@@ -4,7 +4,7 @@
             <label
                 style="
                     text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-                    font-size: 66px;
+                    font-size: 18px;
                     margin-top: 16px;
                 "
                 ref="loadingElement"
@@ -344,8 +344,8 @@ const loading = ref('loading...');
 let animationId = -1;
 let progress = 0;
 const updateLoading = () => {
-    loading.value = 'loading' + '.'.repeat(Math.min(10, progress + 1)) + progress.toFixed(2) + '%';
-    progress = Math.min(99.9, progress + 0.2);
+    loading.value = 'Retrieving remote resources such as fonts' + '...' + progress.toFixed(2) + '%';
+    progress = Math.min(99.9, progress + (progress <= 70 ? 0.1 : 0.01));
     animationId = requestAnimationFrame(() => {
         updateLoading();
     });
