@@ -27,6 +27,10 @@ export class MagicInput {
         this._input.blur();
     }
 
+    changeTextAlign(align: 'left' | 'right' | 'center') {
+        this._input.changeTextAlign(align);
+    }
+
     applyStyle(style: Partial<TMTextStyle>) {
         this._input.applyStyle(style);
     }

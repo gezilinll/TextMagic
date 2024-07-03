@@ -70,40 +70,6 @@
                 bold
             </button>
         </div>
-
-        <div class="input-group-right">
-            <label>Text Stroke: </label>
-            <br />
-            <button @click="applyStyle({ stroke: undefined })">none</button>
-            <button
-                @click="applyStyle({ stroke: { type: 'center', width: 4, color: '#ff0000' } })"
-                style="margin-left: 8px"
-            >
-                center
-            </button>
-        </div>
-
-        <div class="input-group-right" style="margin-top: 72px">
-            <label>Text Shadow: </label>
-            <br />
-            <button @click="applyStyle({ shadow: undefined })">none</button>
-            <button
-                @click="applyStyle({ shadow: { color: 'rgb(66, 255, 0)', blurRadius: 5 } })"
-                style="margin-left: 5px"
-            >
-                enable
-            </button>
-        </div>
-
-        <div class="input-group-right" style="margin-top: 130px">
-            <label>Text Blur: </label>
-            <br />
-            <button @click="applyStyle({ blur: undefined })">none</button>
-            <button @click="applyStyle({ blur: { radius: 8 } })" style="margin-left: 5px">
-                enable
-            </button>
-        </div>
-
         <div class="input-group-left">
             <label>Text Decoration: </label>
             <br />
@@ -177,7 +143,6 @@
                 line-through-solid
             </button>
         </div>
-
         <div class="input-group-left">
             <label>Text Highlight: </label>
             <br />
@@ -193,6 +158,50 @@
                 "
                 style="margin-top: 2px"
             >
+                enable
+            </button>
+        </div>
+
+        <div class="input-group-right" style="margin-top: 30px">
+            <label>Text Align: </label>
+            <br />
+            <button @click="input.changeTextAlign('left')" style="width: 110px">left</button>
+            <br />
+            <button @click="input.changeTextAlign('center')" style="margin-top: 2px; width: 110px">
+                center
+            </button>
+            <br />
+            <button @click="input.changeTextAlign('right')" style="margin-top: 2px; width: 110px">
+                right
+            </button>
+        </div>
+        <div class="input-group-right" style="margin-top: 140px">
+            <label>Text Stroke: </label>
+            <br />
+            <button @click="applyStyle({ stroke: undefined })">none</button>
+            <button
+                @click="applyStyle({ stroke: { type: 'center', width: 4, color: '#ff0000' } })"
+                style="margin-left: 8px"
+            >
+                center
+            </button>
+        </div>
+        <div class="input-group-right" style="margin-top: 200px">
+            <label>Text Shadow: </label>
+            <br />
+            <button @click="applyStyle({ shadow: undefined })">none</button>
+            <button
+                @click="applyStyle({ shadow: { color: 'rgb(66, 255, 0)', blurRadius: 5 } })"
+                style="margin-left: 5px"
+            >
+                enable
+            </button>
+        </div>
+        <div class="input-group-right" style="margin-top: 260px">
+            <label>Text Blur: </label>
+            <br />
+            <button @click="applyStyle({ blur: undefined })">none</button>
+            <button @click="applyStyle({ blur: { radius: 8 } })" style="margin-left: 5px">
                 enable
             </button>
         </div>
@@ -252,11 +261,12 @@ function applyStyle(style: Partial<TMTextStyle>) {
 
 const root: Ref<HTMLDivElement | null> = ref(null);
 const input = new MagicInput({
-    width: 720,
+    width: 300,
     height: 200,
     fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
     fontSize: fontSize.value,
     fontFamily: 'Roboto',
+    textAlign: 'left',
 });
 
 onMounted(async () => {

@@ -101,6 +101,25 @@ export class TMRenderer implements IRenderer {
         return { weight, slant, width: CanvasKit.FontWidth.Normal };
     }
 
+    private _convertToTextAlign(align: 'left' | 'center' | 'right') {
+        const CanvasKit = this.CanvasKit!;
+        let textAlign;
+        switch (align) {
+            case 'left':
+                textAlign = CanvasKit.TextAlign.Left;
+                break;
+            case 'center':
+                textAlign = CanvasKit.TextAlign.Center;
+                break;
+            case 'right':
+                textAlign = CanvasKit.TextAlign.Right;
+                break;
+            default:
+                textAlign = CanvasKit.TextAlign.Left;
+        }
+        return textAlign;
+    }
+
     measure(data: TMTextData) {
         if (this._paragraph) {
             this._paragraph.delete();
@@ -119,7 +138,7 @@ export class TMRenderer implements IRenderer {
                 fontSize: style.fontSize,
                 fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             },
-            textAlign: CanvasKit.TextAlign.Left,
+            textAlign: this._convertToTextAlign(data.textAlign),
         });
         const builder = CanvasKit.ParagraphBuilder.MakeFromFontProvider(paraStyle, this.FontMgr!);
         data.contents.forEach((content, index) => {
@@ -146,42 +165,47 @@ export class TMRenderer implements IRenderer {
                 height: line.height,
                 top: lastRow ? lastRow.bottom : 0,
                 bottom: lastRow ? lastRow.bottom + line.height : line.height,
+                startIndex: -1,
+                endIndex: -1,
             });
         });
         let rowIndex = 0;
         let characterIndex = 0;
+        let lastCharacterIsNewLine = false;
         data.contents.forEach((content, index) => {
             for (let i = 0; i < content.length; i++) {
                 let currentRow = rows[rowIndex];
+                if (currentRow.startIndex === -1) {
+                    currentRow.startIndex = characterIndex;
+                }
                 const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
                 if (
-                    content[i] === '\n' ||
+                    lastCharacterIsNewLine ||
                     glyphInfo.graphemeLayoutBounds[1] >=
                         currentRow.bottom - data.styles[index].fontSize / 10
                 ) {
+                    currentRow.endIndex = characterIndex - 1;
                     rowIndex++;
+                    currentRow = rows[rowIndex];
+                    currentRow.startIndex = characterIndex;
+                    lastCharacterIsNewLine = false;
                 }
-                currentRow = rows[rowIndex];
                 characterBounds.push({
                     char: content[i],
-                    x: content[i] === '\n' ? 0 : glyphInfo.graphemeLayoutBounds[0],
-                    y: content[i] === '\n' ? currentRow.top : glyphInfo.graphemeLayoutBounds[1],
-                    width:
-                        content[i] === '\n'
-                            ? 0
-                            : glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
-                    height:
-                        content[i] === '\n'
-                            ? currentRow.height
-                            : glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
+                    x: glyphInfo.graphemeLayoutBounds[0],
+                    y: glyphInfo.graphemeLayoutBounds[1],
+                    width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
+                    height: glyphInfo.graphemeLayoutBounds[3] - glyphInfo.graphemeLayoutBounds[1],
                     whichContent: index,
                     indexOfContent: i,
                     whichRow: rowIndex,
                     style: data.styles[index],
                 });
+                lastCharacterIsNewLine = content[i] === '\n';
                 characterIndex++;
             }
         });
+        rows[rows.length - 1].endIndex = characterBounds.length - 1;
 
         this._textMetrics = {
             rows,

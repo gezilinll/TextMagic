@@ -1,4 +1,5 @@
 import {
+    TMCharacterMetrics,
     TMCursorInfo,
     TMInput as IInput,
     TMInputOptions,
@@ -34,6 +35,7 @@ export class TMInput implements IInput {
             fontSize: 16,
             fontColor: '#000000',
             fontFamily: 'Yahei',
+            textAlign: 'left',
             width: 260,
             height: 200,
         };
@@ -41,13 +43,14 @@ export class TMInput implements IInput {
         this._textData = {
             width: this._defaultOptions.width,
             height: this._defaultOptions.height,
+            textAlign: this._defaultOptions.textAlign,
             contents: [],
             styles: [],
         };
 
         this._selectRange = {
-            start: { characterIndex: -1, position: 'after' },
-            end: { characterIndex: -1, position: 'after' },
+            start: { afterCharacterIndex: -1, cursorPosition: 'after-index' },
+            end: { afterCharacterIndex: -1, cursorPosition: 'after-index' },
             color: '#0000FF',
             opacity: 0.2,
         };
@@ -137,10 +140,14 @@ export class TMInput implements IInput {
     }
 
     getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo {
-        if (this._textMetrics.allCharacter.length === 0) {
+        if (
+            this._textMetrics.allCharacter.length === 0 ||
+            (this._textMetrics.allCharacter.length === 1 &&
+                this._textMetrics.allCharacter[0].char === '\n')
+        ) {
             return {
-                characterIndex: -1,
-                position: 'after',
+                afterCharacterIndex: -1,
+                cursorPosition: 'after-index',
             };
         }
         let result = -1;
@@ -148,15 +155,40 @@ export class TMInput implements IInput {
             const bound = this._textMetrics.allCharacter[i];
             const row = this._textMetrics.rows[bound.whichRow];
             if (mouseY >= row.top && mouseY <= row.bottom) {
+                if (this._textData.textAlign === 'left') {
+                    if (
+                        mouseX >
+                        this._textMetrics.allCharacter[row.endIndex].x +
+                            this._textMetrics.allCharacter[row.endIndex].width
+                    ) {
+                        result = row.endIndex;
+                        break;
+                    }
+                } else if (this._textData.textAlign === 'right') {
+                    if (mouseX < this._textMetrics.allCharacter[row.startIndex].x) {
+                        return {
+                            afterCharacterIndex: row.startIndex - 1,
+                            cursorPosition: 'before-next-index',
+                        };
+                    }
+                } else if (this._textData.textAlign === 'center') {
+                    if (mouseX < this._textMetrics.allCharacter[row.startIndex].x) {
+                        return {
+                            afterCharacterIndex: row.startIndex - 1,
+                            cursorPosition: 'before-next-index',
+                        };
+                    } else if (
+                        mouseX >
+                        this._textMetrics.allCharacter[row.endIndex].x +
+                            this._textMetrics.allCharacter[row.endIndex].width
+                    ) {
+                        result = row.endIndex;
+                        break;
+                    }
+                }
                 if (mouseX >= bound.x && mouseX <= bound.x + bound.width) {
                     result = i;
                     break;
-                } else if (i + 1 <= this._textMetrics.allCharacter.length - 1) {
-                    const nextBound = this._textMetrics.allCharacter[i + 1];
-                    if (nextBound.whichRow !== bound.whichRow) {
-                        result = i;
-                        break;
-                    }
                 }
             }
         }
@@ -164,10 +196,18 @@ export class TMInput implements IInput {
             result = this._textMetrics.allCharacter.length - 1;
         }
         const targetBound = this._textMetrics.allCharacter[result];
-        return {
-            characterIndex: mouseX < targetBound.x + targetBound.width / 2 ? result - 1 : result,
-            position: 'after',
-        };
+        if (targetBound.char === '\n') {
+            return {
+                afterCharacterIndex: result - 1,
+                cursorPosition: 'after-index',
+            };
+        } else {
+            return {
+                afterCharacterIndex:
+                    mouseX < targetBound.x + targetBound.width / 2 ? result - 1 : result,
+                cursorPosition: 'after-index',
+            };
+        }
     }
 
     private _handleMouseDown(e: MouseEvent) {
@@ -177,26 +217,67 @@ export class TMInput implements IInput {
             e.offsetX * this.devicePixelRatio,
             e.offsetY * this.devicePixelRatio
         );
-        this._hideSelectRange();
         this.focus();
-        this._showCursor();
     }
 
     private _getCursorRenderInfo(): { x: number; y: number; height: number } {
-        if (this._textMetrics.allCharacter.length === 0 && this._cursorInfo.characterIndex < 0) {
-            return { x: 0, y: 0, height: this._defaultOptions.fontSize };
-        }
-        if (this._cursorInfo.characterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
-            const nextCharacter = this._textMetrics.allCharacter[0];
-            return { x: 0, y: 0, height: this._textMetrics.rows[nextCharacter.whichRow].height };
-        }
-        const character = this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
-        const row = this._textMetrics.rows[character.whichRow];
-        return {
-            x: character.x + character.width,
-            y: row.top,
-            height: row.height,
+        const getXBeforeZeroOrNewLine = (character?: TMCharacterMetrics) => {
+            if (character) {
+                return character.x;
+            }
+            if (this._textData.textAlign === 'left') {
+                return 0;
+            } else if (this._textData.textAlign === 'center') {
+                return this._textData.width / 2;
+            } else {
+                return this._textData.width;
+            }
         };
+
+        if (
+            this._textMetrics.allCharacter.length === 0 &&
+            this._cursorInfo.afterCharacterIndex < 0
+        ) {
+            return { x: getXBeforeZeroOrNewLine(), y: 0, height: this._defaultOptions.fontSize };
+        }
+        if (this._cursorInfo.afterCharacterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
+            const nextCharacter = this._textMetrics.allCharacter[0];
+            return {
+                x: getXBeforeZeroOrNewLine(nextCharacter),
+                y: 0,
+                height: this._textMetrics.rows[nextCharacter.whichRow].height,
+            };
+        }
+
+        if (this._cursorInfo.cursorPosition === 'after-index') {
+            const character = this._textMetrics.allCharacter[this._cursorInfo.afterCharacterIndex];
+            const row = this._textMetrics.rows[character.whichRow];
+            return {
+                x:
+                    character.char === '\n'
+                        ? getXBeforeZeroOrNewLine(
+                              this._textMetrics.allCharacter[
+                                  this._cursorInfo.afterCharacterIndex + 1
+                              ]
+                          )
+                        : character.x + character.width,
+                y: character.char === '\n' ? row.bottom : row.top,
+                height:
+                    character.char === '\n' &&
+                    character.whichRow + 1 <= this._textMetrics.rows.length - 1
+                        ? this._textMetrics.rows[character.whichRow + 1].height
+                        : row.height,
+            };
+        } else {
+            const nextCharacter =
+                this._textMetrics.allCharacter[this._cursorInfo.afterCharacterIndex + 1];
+            const row = this._textMetrics.rows[nextCharacter.whichRow];
+            return {
+                x: nextCharacter.x,
+                y: row.top,
+                height: row.height,
+            };
+        }
     }
 
     private _showCursor() {
@@ -226,22 +307,25 @@ export class TMInput implements IInput {
     private _hideCursor() {
         clearTimeout(this._blinkTimer);
         this._cursor.style.display = 'none';
-        this._cursorInfo.characterIndex = -1;
+        this._cursorInfo.afterCharacterIndex = -1;
     }
 
     private _getSelectRange() {
-        if (this._selectRange.start.characterIndex === this._selectRange.end.characterIndex) {
+        if (
+            this._selectRange.start.afterCharacterIndex ===
+            this._selectRange.end.afterCharacterIndex
+        ) {
             return { start: -1, end: -1 };
         }
         const actualStart =
-            this._selectRange.start.characterIndex < this._selectRange.end.characterIndex
+            this._selectRange.start.afterCharacterIndex < this._selectRange.end.afterCharacterIndex
                 ? this._selectRange.start
                 : this._selectRange.end;
         const actualEnd =
-            this._selectRange.start.characterIndex > this._selectRange.end.characterIndex
+            this._selectRange.start.afterCharacterIndex > this._selectRange.end.afterCharacterIndex
                 ? this._selectRange.start
                 : this._selectRange.end;
-        return { start: actualStart.characterIndex + 1, end: actualEnd.characterIndex };
+        return { start: actualStart.afterCharacterIndex + 1, end: actualEnd.afterCharacterIndex };
     }
 
     private _handleMouseMove(e: MouseEvent) {
@@ -295,11 +379,11 @@ export class TMInput implements IInput {
 
     private _hideSelectRange() {
         if (
-            this._selectRange.start.characterIndex !== -1 ||
-            this._selectRange.end.characterIndex !== -1
+            this._selectRange.start.afterCharacterIndex !== -1 ||
+            this._selectRange.end.afterCharacterIndex !== -1
         ) {
-            this._selectRange.start.characterIndex = -1;
-            this._selectRange.end.characterIndex = -1;
+            this._selectRange.start.afterCharacterIndex = -1;
+            this._selectRange.end.afterCharacterIndex = -1;
             const ctx = this._rangeCanvas.getContext('2d')!;
             ctx.clearRect(0, 0, this._rangeCanvas.width, this._rangeCanvas.height);
         }
@@ -307,6 +391,18 @@ export class TMInput implements IInput {
 
     private _handleMouseUp() {
         this._isMouseDown = false;
+    }
+
+    changeTextAlign(align: 'left' | 'right' | 'center'): void {
+        this._textData.textAlign = align;
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render();
+        const range = this._getSelectRange();
+        if (range.start !== -1 && range.end !== -1) {
+            this._showSelectRange();
+        } else if (this._isCursorShowing()) {
+            this._showCursor();
+        }
     }
 
     applyStyle(style: Partial<TMTextStyle>) {
@@ -410,7 +506,7 @@ export class TMInput implements IInput {
             this._insertToContentAtCursorPosition(data);
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render();
-            this._cursorInfo.characterIndex += data.length;
+            this._cursorInfo.afterCharacterIndex += data.length;
             this._hideSelectRange();
             this._showCursor();
         }, 0);
@@ -432,18 +528,20 @@ export class TMInput implements IInput {
             } else {
                 let whichContent = 0;
                 let indexOfContent = 0;
-                if (this._cursorInfo.characterIndex < 0) {
-                    whichContent = 0;
-                    indexOfContent = 0;
+                if (this._cursorInfo.afterCharacterIndex < 0) {
+                    const content = this._textData.contents[whichContent];
+                    this._textData.contents[whichContent] = data + content.slice(0);
                 } else {
                     const character =
-                        this._textMetrics.allCharacter[this._cursorInfo.characterIndex];
+                        this._textMetrics.allCharacter[this._cursorInfo.afterCharacterIndex];
                     whichContent = character.whichContent;
                     indexOfContent = character.indexOfContent;
+                    const content = this._textData.contents[whichContent];
+                    this._textData.contents[whichContent] =
+                        content.slice(0, indexOfContent + 1) +
+                        data +
+                        content.slice(indexOfContent + 1);
                 }
-                const content = this._textData.contents[whichContent];
-                this._textData.contents[whichContent] =
-                    content.slice(0, indexOfContent + 1) + data + content.slice(indexOfContent + 1);
             }
         }
     }
@@ -462,7 +560,7 @@ export class TMInput implements IInput {
         this._insertToContentAtCursorPosition('\n');
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render();
-        this._cursorInfo.characterIndex++;
+        this._cursorInfo.afterCharacterIndex++;
         this._hideSelectRange();
         this._showCursor();
     }
@@ -504,16 +602,10 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(sliceStart, sliceEnd - sliceStart);
                 this._textData.styles.splice(sliceStart, sliceEnd - sliceStart);
             }
-            this._cursorInfo.characterIndex = selectRange.start - 1;
-        } else if (
-            (this._cursorInfo.characterIndex === 0 && this._cursorInfo.position === 'after') ||
-            this._cursorInfo.characterIndex > 0
-        ) {
+            this._cursorInfo.afterCharacterIndex = selectRange.start - 1;
+        } else if (this._cursorInfo.afterCharacterIndex >= 0) {
             updated = true;
-            const index =
-                this._cursorInfo.position === 'after'
-                    ? this._cursorInfo.characterIndex
-                    : this._cursorInfo.characterIndex - 1;
+            const index = this._cursorInfo.afterCharacterIndex;
             const targetCharacter = this._textMetrics.allCharacter[index];
             const content = this._textData.contents[targetCharacter.whichContent];
             this._textData.contents[targetCharacter.whichContent] =
@@ -523,7 +615,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(targetCharacter.whichContent, 1);
                 this._textData.styles.splice(targetCharacter.whichContent, 1);
             }
-            this._cursorInfo.characterIndex--;
+            this._cursorInfo.afterCharacterIndex--;
         }
         if (updated) {
             this._textMetrics = this.renderer.measure(this._textData);

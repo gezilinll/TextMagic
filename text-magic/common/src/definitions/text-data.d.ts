@@ -9,6 +9,8 @@ export interface TMRowMetrics {
     height: number;
     top: number;
     bottom: number;
+    startIndex: number;
+    endIndex: number;
 }
 export interface TMCharacterMetrics {
     char: string;
@@ -59,6 +61,7 @@ export interface TMTextDecorationStyle {
 export interface TMTextData {
     width: number;
     height: number;
+    textAlign: 'left' | 'right' | 'center';
     contents: string[];
     styles: TMTextStyle[];
 }

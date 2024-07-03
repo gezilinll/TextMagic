@@ -1,3 +1,4 @@
+import { TMTextStyle } from './text-data';
 import { TMRenderer } from './text-renderer';
 
 export interface TMInputOptions {
@@ -6,6 +7,7 @@ export interface TMInputOptions {
     fontSize: number;
     fontColor: string;
     fontFamily: string;
+    textAlign: 'left' | 'right' | 'center';
 }
 
 export interface TMSelectRange {
@@ -15,16 +17,9 @@ export interface TMSelectRange {
     opacity: number;
 }
 
-export interface TMTextStyle {
-    fontSize: number;
-    fontColor: string;
-    fontFamily: string;
-    fontStyle: string;
-}
-
 export interface TMCursorInfo {
-    characterIndex: number;
-    position: 'after';
+    afterCharacterIndex: number;
+    cursorPosition: 'after-index' | 'before-next-index';
 }
 
 export interface TMInput {
@@ -32,7 +27,9 @@ export interface TMInput {
 
     getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo;
 
-    applyStyle(style: Partial<TMTextStyle>);
+    changeTextAlign(align: 'left' | 'right' | 'center'): void;
 
-    destroy();
+    applyStyle(style: Partial<TMTextStyle>): void;
+
+    destroy(): void;
 }
