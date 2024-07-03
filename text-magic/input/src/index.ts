@@ -236,7 +236,7 @@ export class TMInput implements IInput {
             } else if (this._textData.textAlign === 'center') {
                 return (this._textData.width * this.devicePixelRatio) / 2;
             } else {
-                return this._textData.width * this.devicePixelRatio - 1;
+                return this._textData.width * this.devicePixelRatio;
             }
         };
 
@@ -296,12 +296,16 @@ export class TMInput implements IInput {
     private _showCursor() {
         clearTimeout(this._blinkTimer);
         const bound = this._getCursorRenderInfo();
-        this._cursor.style.left = `${bound.x / this.devicePixelRatio}px`;
+        const offset =
+            bound.x >= this._textData.width * this.devicePixelRatio
+                ? Math.max(1, this._textData.width * this.devicePixelRatio - bound.x)
+                : 0;
+        this._cursor.style.left = `${bound.x / this.devicePixelRatio - offset}px`;
         this._cursor.style.top = `${bound.y / this.devicePixelRatio}px`;
         this._cursor.style.height = `${bound.height / this.devicePixelRatio}px`;
         this._cursor.style.opacity = '1';
-        this._textArea.style.left = `${bound.x / this.devicePixelRatio}px`;
-        this._textArea.style.top = `${bound.y / this.devicePixelRatio}px`;
+        this._textArea.style.left = `${bound.x / this.devicePixelRatio - offset * 5}px`;
+        this._textArea.style.top = `${(bound.y + bound.height / 2) / this.devicePixelRatio}px`;
         setTimeout(() => {
             this._textArea.focus();
             this._cursor.style.display = 'block';
