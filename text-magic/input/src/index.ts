@@ -34,7 +34,7 @@ export class TMInput implements IInput {
         this._defaultOptions = options || {
             fontSize: 16,
             fontColor: '#000000',
-            fontFamily: 'Yahei',
+            fontFamily: '',
             textAlign: 'left',
             paragraphSpacing: 0,
             width: 260,

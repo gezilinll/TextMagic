@@ -1,6 +1,16 @@
 <template>
     <div class="app-container">
-        <div class="input-container" ref="root"></div>
+        <div class="input-container" ref="root">
+            <label
+                style="
+                    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+                    font-size: 66px;
+                    margin-top: 16px;
+                "
+                ref="loadingElement"
+                >{{ loading }}</label
+            >
+        </div>
 
         <div class="input-group-left">
             <button @click="blurInput">Make Input Blur</button>
@@ -245,7 +255,7 @@
 
 <script setup lang="ts">
 import { TMTextStyle } from '@text-magic/common';
-import { getDefaultFont } from '@text-magic/renderer';
+import { DEFAULT_FONT_FAMILY, getDefaultFont } from '@text-magic/renderer';
 import { MagicInput } from 'text-magic-input';
 import { onMounted, Ref, ref, watch } from 'vue';
 
@@ -324,21 +334,35 @@ const input = new MagicInput({
     height: 200,
     fontColor: rgbToHex(fontColorR.value, fontColorG.value, fontColorB.value),
     fontSize: fontSize.value,
-    fontFamily: 'Roboto',
+    fontFamily: DEFAULT_FONT_FAMILY,
     textAlign: 'left',
     paragraphSpacing: 0,
 });
 
+const loadingElement: Ref<HTMLLabelElement | null> = ref(null);
+const loading = ref('loading...');
+let animationId = -1;
+let progress = 0;
+const updateLoading = () => {
+    loading.value = 'loading' + '.'.repeat(Math.min(10, progress + 1)) + progress.toFixed(2) + '%';
+    progress = Math.min(99.9, progress + 0.2);
+    animationId = requestAnimationFrame(() => {
+        updateLoading();
+    });
+};
+updateLoading();
 onMounted(async () => {
     disableScroll();
 
     await input.init();
+    const defaultFont = await getDefaultFont();
+    input.registerFont(defaultFont);
+
+    cancelAnimationFrame(animationId);
+    root.value!.removeChild(loadingElement.value!);
 
     const bound = root.value!.getBoundingClientRect();
     input.changeSize(bound.width, bound.height);
-
-    const defaultFont = await getDefaultFont();
-    input.registerFont(defaultFont);
 
     root.value!.appendChild(input.element);
     input.focus();
