@@ -201,7 +201,7 @@
             <label>Text Blur: </label>
             <br />
             <button @click="applyStyle({ blur: undefined })">none</button>
-            <button @click="applyStyle({ blur: { radius: 8 } })" style="margin-left: 5px">
+            <button @click="applyStyle({ blur: { radius: 5 } })" style="margin-left: 5px">
                 enable
             </button>
         </div>
