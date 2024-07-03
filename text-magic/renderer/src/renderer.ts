@@ -233,6 +233,31 @@ export class TMRenderer implements IRenderer {
             allCharacter: characterBounds,
         };
 
+        if (window.devicePixelRatio > 1 && data.textAlign !== 'left') {
+            this._textMetrics.rows.forEach((row) => {
+                if (data.textAlign === 'right') {
+                    const lastCharacter = this._textMetrics!.allCharacter[row.endIndex];
+                    const offset =
+                        data.width * window.devicePixelRatio -
+                        (lastCharacter.x + lastCharacter.width);
+                    for (let index = row.startIndex; index <= row.endIndex; index++) {
+                        this._textMetrics!.allCharacter[index].x += offset;
+                    }
+                } else {
+                    const firstCharacter = this._textMetrics!.allCharacter[row.startIndex];
+                    const lastCharacter = this._textMetrics!.allCharacter[row.endIndex];
+                    const leftOffset = firstCharacter.x;
+                    const rightOffset =
+                        data.width * window.devicePixelRatio -
+                        (lastCharacter.x + lastCharacter.width);
+                    const offset = (rightOffset - leftOffset) / 2;
+                    for (let index = row.startIndex; index <= row.endIndex; index++) {
+                        this._textMetrics!.allCharacter[index].x += offset;
+                    }
+                }
+            });
+        }
+
         builder.delete();
         return this._textMetrics;
     }

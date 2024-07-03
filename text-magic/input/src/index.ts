@@ -234,9 +234,9 @@ export class TMInput implements IInput {
             if (this._textData.textAlign === 'left') {
                 return 0;
             } else if (this._textData.textAlign === 'center') {
-                return this._textData.width / 2;
+                return (this._textData.width * this.devicePixelRatio) / 2;
             } else {
-                return this._textData.width - 1;
+                return this._textData.width * this.devicePixelRatio - 1;
             }
         };
 
