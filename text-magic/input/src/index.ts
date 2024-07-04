@@ -711,28 +711,83 @@ export class TMInput implements IInput {
             );
             this._showCursor();
         } else if (e.code === 'ArrowRight') {
-            if (rangeIsValid) {
-                this._cursorInfo = {
-                    afterCharacterIndex: selectRange.end - 1,
-                    cursorPosition: 'after-index',
-                };
-                this._hideSelectRange();
-            }
-            if (this._textMetrics.allCharacter.length > this._cursorInfo.afterCharacterIndex + 1) {
-                this._cursorInfo.afterCharacterIndex++;
-                this._showCursor();
+            if (e.shiftKey) {
+                if (rangeIsValid) {
+                    if (selectRange.end < this._textMetrics.allCharacter.length - 1) {
+                        this._selectRange.end.afterCharacterIndex = selectRange.end + 1;
+                        this._selectRange.start.afterCharacterIndex = selectRange.start - 1;
+                        if (
+                            this._textMetrics.allCharacter[
+                                this._selectRange.end.afterCharacterIndex
+                            ]?.char === '\n' &&
+                            this._selectRange.end.afterCharacterIndex + 1 <=
+                                this._textMetrics.allCharacter.length - 1
+                        ) {
+                            this._selectRange.end.afterCharacterIndex++;
+                        }
+                        this._showSelectRange();
+                    }
+                } else if (
+                    this._cursorInfo.afterCharacterIndex <
+                    this._textMetrics.allCharacter.length - 1
+                ) {
+                    this._selectRange.start.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex;
+                    this._selectRange.end.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex + 1;
+
+                    this._showSelectRange();
+                }
+            } else {
+                if (rangeIsValid) {
+                    this._cursorInfo = {
+                        afterCharacterIndex: selectRange.end - 1,
+                        cursorPosition: 'after-index',
+                    };
+                    this._hideSelectRange();
+                }
+                if (
+                    this._textMetrics.allCharacter.length >
+                    this._cursorInfo.afterCharacterIndex + 1
+                ) {
+                    this._cursorInfo.afterCharacterIndex++;
+                    this._showCursor();
+                }
             }
         } else if (e.code === 'ArrowLeft') {
-            if (rangeIsValid) {
-                this._cursorInfo = {
-                    afterCharacterIndex: selectRange.start,
-                    cursorPosition: 'after-index',
-                };
-                this._hideSelectRange();
-            }
-            if (this._cursorInfo.afterCharacterIndex >= 0) {
-                this._cursorInfo.afterCharacterIndex--;
-                this._showCursor();
+            if (e.shiftKey) {
+                if (rangeIsValid) {
+                    if (selectRange.start > 0) {
+                        this._selectRange.start.afterCharacterIndex = selectRange.start - 2;
+                        if (
+                            this._textMetrics.allCharacter[
+                                this._selectRange.start.afterCharacterIndex + 1
+                            ]?.char === '\n'
+                        ) {
+                            this._selectRange.start.afterCharacterIndex--;
+                        }
+                        this._selectRange.end.afterCharacterIndex = selectRange.end;
+                        this._showSelectRange();
+                    }
+                } else if (this._cursorInfo.afterCharacterIndex >= 0) {
+                    this._selectRange.end.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex;
+                    this._selectRange.start.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex - 1;
+                    this._showSelectRange();
+                }
+            } else {
+                if (rangeIsValid) {
+                    this._cursorInfo = {
+                        afterCharacterIndex: selectRange.start,
+                        cursorPosition: 'after-index',
+                    };
+                    this._hideSelectRange();
+                }
+                if (this._cursorInfo.afterCharacterIndex >= 0) {
+                    this._cursorInfo.afterCharacterIndex--;
+                    this._showCursor();
+                }
             }
         }
     }
