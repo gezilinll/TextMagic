@@ -65,7 +65,7 @@ export class TMInput implements IInput {
         this._textArea.style.width = '0px';
         this._textArea.style.height = '0px';
         this._textArea.addEventListener('input', (event) => {
-            this._handleInput(event as InputEvent);
+            this._handleInput((event as InputEvent).data);
         });
         this._textArea.addEventListener('compositionstart', () => {
             this._isCompositing = true;
@@ -530,9 +530,8 @@ export class TMInput implements IInput {
         }
     }
 
-    private _handleInput(e: InputEvent) {
+    private _handleInput(data: string | null) {
         setTimeout(() => {
-            const data = e.data;
             if (!data || this._isCompositing) {
                 return;
             }
@@ -858,9 +857,32 @@ export class TMInput implements IInput {
         }
     }
 
-    private _copy() {}
+    private _copy() {
+        const selectRange = this._getSelectRange();
+        if (selectRange.start !== -1 && selectRange.end !== -1) {
+            const content = this._textMetrics.allCharacter
+                .slice(selectRange.start, selectRange.end + 1)
+                .map((item) => item.char)
+                .join('');
+            navigator.clipboard
+                .writeText(content)
+                .then(() => {
+                    console.log('Text copied to clipboard:', content);
+                })
+                .catch((error) => {
+                    console.error('Failed to copy text to clipboard: ', error);
+                });
+        }
+    }
 
-    private _paste() {}
+    private async _paste() {
+        try {
+            const text = await navigator.clipboard.readText();
+            this._handleInput(text);
+        } catch (error) {
+            console.error('Failed to read clipboard contents: ', error);
+        }
+    }
 
     private _isCursorShowing() {
         return this._cursor.style.display === 'block';
