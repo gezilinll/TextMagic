@@ -687,18 +687,46 @@ export class TMInput implements IInput {
         const selectRange = this._getSelectRange();
         const rangeIsValid = selectRange.start !== -1 && selectRange.end !== -1;
         if (e.code === 'ArrowUp') {
-            if (rangeIsValid) {
-                this._cursorInfo = {
-                    afterCharacterIndex: selectRange.start - 1,
+            const startCharacterIndex = rangeIsValid
+                ? selectRange.start - 1
+                : this._cursorInfo.afterCharacterIndex;
+            const startCharacter = this._textMetrics.allCharacter[startCharacterIndex];
+            const rowIndex = startCharacter?.whichRow ?? 0;
+            const startRow = this._textMetrics.rows[rowIndex];
+            let newCursor: TMCursorInfo;
+            if (rowIndex === 0) {
+                newCursor = {
+                    afterCharacterIndex: -1,
                     cursorPosition: 'after-index',
                 };
-                this._hideSelectRange();
+            } else {
+                newCursor = this.getCursorByCoordinate(
+                    startCharacter ? startCharacter.x + startCharacter.width : 0,
+                    startRow.top - 2
+                );
+                if (
+                    this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
+                    newCursor.afterCharacterIndex - 1 >= 0
+                ) {
+                    newCursor.afterCharacterIndex--;
+                }
             }
-            const renderInfo = this._getCursorRenderInfo();
-            if (renderInfo.y > 0) {
-                this._cursorInfo = this.getCursorByCoordinate(renderInfo.x, renderInfo.y - 2);
+            if (e.shiftKey) {
+                if (rangeIsValid) {
+                    this._selectRange.end.afterCharacterIndex = selectRange.end;
+                } else {
+                    this._selectRange.end.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex;
+                }
+                this._selectRange.start = newCursor;
+                this._showSelectRange();
+            } else {
+                this._cursorInfo = newCursor;
+                if (rangeIsValid) {
+                    this._hideSelectRange();
+                }
+                this._showCursor();
             }
-            this._showCursor();
         } else if (e.code === 'ArrowDown') {
             const endCharacterIndex = rangeIsValid
                 ? selectRange.end
