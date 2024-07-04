@@ -681,6 +681,9 @@ export class TMInput implements IInput {
     }
 
     private _arrow(e: KeyboardEvent) {
+        if (this._textMetrics.allCharacter.length === 0) {
+            return;
+        }
         const selectRange = this._getSelectRange();
         const rangeIsValid = selectRange.start !== -1 && selectRange.end !== -1;
         if (e.code === 'ArrowUp') {
@@ -697,19 +700,43 @@ export class TMInput implements IInput {
             }
             this._showCursor();
         } else if (e.code === 'ArrowDown') {
-            if (rangeIsValid) {
-                this._cursorInfo = {
-                    afterCharacterIndex: selectRange.end,
+            const endCharacterIndex = rangeIsValid
+                ? selectRange.end
+                : this._cursorInfo.afterCharacterIndex;
+            const endCharacter = this._textMetrics.allCharacter[endCharacterIndex];
+            const rowIndex = endCharacter?.whichRow ?? 0;
+            const endRow = this._textMetrics.rows[rowIndex];
+            let newCursor: TMCursorInfo;
+            if (rowIndex === this._textMetrics.rows.length - 1) {
+                newCursor = {
+                    afterCharacterIndex: this._textMetrics.allCharacter.length - 1,
                     cursorPosition: 'after-index',
                 };
-                this._hideSelectRange();
+            } else {
+                newCursor = this.getCursorByCoordinate(endCharacter?.x ?? 0, endRow.bottom + 2);
+                if (
+                    this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
+                    newCursor.afterCharacterIndex + 1 <= this._textMetrics.allCharacter.length - 1
+                ) {
+                    newCursor.afterCharacterIndex++;
+                }
             }
-            const renderInfo = this._getCursorRenderInfo();
-            this._cursorInfo = this.getCursorByCoordinate(
-                renderInfo.x,
-                renderInfo.y + renderInfo.height + 2
-            );
-            this._showCursor();
+            if (e.shiftKey) {
+                if (rangeIsValid) {
+                    this._selectRange.start.afterCharacterIndex = selectRange.start - 1;
+                } else {
+                    this._selectRange.start.afterCharacterIndex =
+                        this._cursorInfo.afterCharacterIndex;
+                }
+                this._selectRange.end = newCursor;
+                this._showSelectRange();
+            } else {
+                this._cursorInfo = newCursor;
+                if (rangeIsValid) {
+                    this._hideSelectRange();
+                }
+                this._showCursor();
+            }
         } else if (e.code === 'ArrowRight') {
             if (e.shiftKey) {
                 if (rangeIsValid) {
