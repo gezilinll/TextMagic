@@ -512,8 +512,6 @@ export class TMInput implements IInput {
             this._textMetrics = this.renderer.measure(this._textData);
             this.renderer.render(this._textData.width, this._textData.height);
             this._showSelectRange();
-        } else if (this._isCursorShowing()) {
-            //TODO
         } else {
             this._textData.styles.forEach((styleItem) => {
                 Object.assign(styleItem, style);
@@ -561,6 +559,8 @@ export class TMInput implements IInput {
         } else {
             const range = this._getSelectRange();
             if (range.start !== -1 && range.end !== -1) {
+                this._delete();
+                this._insertToContentAtCursorPosition(data);
             } else {
                 let whichContent = 0;
                 let indexOfContent = 0;
@@ -600,10 +600,14 @@ export class TMInput implements IInput {
         } else if (e.code === 'KeyA' && e.metaKey) {
             this._selectAll();
             e.preventDefault();
-        } else if (e.code === 'KeyA' && e.metaKey) {
+        } else if (e.code === 'KeyC' && e.metaKey) {
             this._copy();
-        } else if (e.code === 'KeyA' && e.metaKey) {
+            e.preventDefault();
+        } else if (e.code === 'KeyV' && e.metaKey) {
             this._paste();
+            e.preventDefault();
+        } else if (e.code === 'Tab') {
+            e.preventDefault();
         }
     }
 
