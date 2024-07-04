@@ -307,7 +307,11 @@ export class TMRenderer implements IRenderer {
                         CanvasKit.parseColorString(character.style.highlight.color)
                     );
                     let endCharacter = character;
-                    for (let index = characterIndex; index <= row.endIndex; index++) {
+                    for (
+                        let index = characterIndex;
+                        index <= this._textMetrics!.allCharacter.length;
+                        index++
+                    ) {
                         if (this._textMetrics!.allCharacter[index].style.highlight) {
                             highlighted.add(index);
                             endCharacter = this._textMetrics!.allCharacter[index];
@@ -315,13 +319,50 @@ export class TMRenderer implements IRenderer {
                             break;
                         }
                     }
-                    this.canvas.drawRect4f(
-                        character.x,
-                        row.contentTop,
-                        endCharacter.x + endCharacter.width,
-                        row.contentTop + row.contentHeight,
-                        highlightPaint
-                    );
+                    if (character.whichRow === endCharacter.whichRow) {
+                        this.canvas.drawRect4f(
+                            character.x,
+                            row.contentTop,
+                            endCharacter.x + endCharacter.width,
+                            row.contentTop + row.contentHeight,
+                            highlightPaint
+                        );
+                    } else {
+                        this.canvas.drawRect4f(
+                            character.x,
+                            row.contentTop,
+                            this._textMetrics!.allCharacter[row.endIndex].x +
+                                this._textMetrics!.allCharacter[row.endIndex].width,
+                            row.contentTop + row.contentHeight,
+                            highlightPaint
+                        );
+                        for (
+                            let index = character.whichRow + 1;
+                            index <= endCharacter.whichRow - 1;
+                            index++
+                        ) {
+                            const targetRow = this._textMetrics!.rows[index];
+                            const startCharacter =
+                                this._textMetrics!.allCharacter[targetRow.startIndex];
+                            const endCharacter =
+                                this._textMetrics!.allCharacter[targetRow.endIndex];
+                            this.canvas.drawRect4f(
+                                startCharacter.x,
+                                targetRow.contentTop,
+                                endCharacter.x + endCharacter.width,
+                                targetRow.contentTop + targetRow.contentHeight,
+                                highlightPaint
+                            );
+                        }
+                        const endRow = this._textMetrics!.rows[endCharacter.whichRow];
+                        this.canvas.drawRect4f(
+                            this._textMetrics!.allCharacter[endRow.startIndex].x,
+                            endRow.contentTop,
+                            endCharacter.x + endCharacter.width,
+                            endRow.contentTop + endRow.contentHeight,
+                            highlightPaint
+                        );
+                    }
                     highlightPaint.delete();
                 }
             }
