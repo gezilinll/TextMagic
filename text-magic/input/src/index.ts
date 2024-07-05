@@ -25,7 +25,7 @@ export class TMInput implements IInput {
     private _blinkTimer = Number.NaN;
 
     private _isMouseDown = false;
-    private _isCompositing = false;
+    private _compositionData: { content: string; startCursor: TMCursorInfo } | null = null;
     private _media: MediaQueryList;
     private _devicePixelRatioListener: any;
     private _defaultOptions: TMInputOptions;
@@ -65,13 +65,23 @@ export class TMInput implements IInput {
         this._textArea.style.width = '0px';
         this._textArea.style.height = '0px';
         this._textArea.addEventListener('input', (event) => {
-            this._handleInput((event as InputEvent).data);
+            if ((event as InputEvent).data && !this._compositionData) {
+                this._handleInput((event as InputEvent).data!);
+            }
         });
         this._textArea.addEventListener('compositionstart', () => {
-            this._isCompositing = true;
+            this._compositionData = {
+                content: '',
+                startCursor: clone(this._cursorInfo),
+            };
         });
-        this._textArea.addEventListener('compositionend', () => {
-            this._isCompositing = false;
+        this._textArea.addEventListener('compositionupdate', (event) => {
+            this._handleInput(event.data);
+            this._compositionData!.content = event.data;
+        });
+        this._textArea.addEventListener('compositionend', (event) => {
+            this._handleInput(event.data);
+            this._compositionData = null;
         });
         this._textArea.addEventListener('keydown', this._handleKeyDown.bind(this));
 
@@ -530,19 +540,34 @@ export class TMInput implements IInput {
         }
     }
 
-    private _handleInput(data: string | null) {
-        setTimeout(() => {
-            if (!data || this._isCompositing) {
-                return;
+    private _handleInput(data: string) {
+        if (this._compositionData) {
+            const character =
+                this._textMetrics.allCharacter[
+                    this._compositionData.startCursor.afterCharacterIndex
+                ];
+            if (this._compositionData.startCursor.afterCharacterIndex >= 0) {
+                const whichContent = character.whichContent;
+                const indexOfContent = character.indexOfContent;
+                const content = this._textData.contents[whichContent];
+                this._textData.contents[whichContent] =
+                    content.slice(0, indexOfContent + 1) +
+                    content.slice(indexOfContent + this._compositionData.content.length + 1);
+            } else if (this._textData.contents.length > 0) {
+                const content = this._textData.contents[0];
+                this._textData.contents[0] = content.slice(
+                    this._compositionData.content.length + 1
+                );
             }
-
-            this._insertToContentAtCursorPosition(data);
-            this._textMetrics = this.renderer.measure(this._textData);
-            this.renderer.render(this._textData.width, this._textData.height);
-            this._cursorInfo.afterCharacterIndex += data.length;
-            this._hideSelectRange();
-            this._showCursor();
-        }, 0);
+            this._cursorInfo.afterCharacterIndex =
+                this._compositionData.startCursor.afterCharacterIndex;
+        }
+        this._insertToContentAtCursorPosition(data);
+        this._textMetrics = this.renderer.measure(this._textData);
+        this.renderer.render(this._textData.width, this._textData.height);
+        this._cursorInfo.afterCharacterIndex += data.length;
+        this._hideSelectRange();
+        this._showCursor();
     }
 
     private _insertToContentAtCursorPosition(data: string) {
