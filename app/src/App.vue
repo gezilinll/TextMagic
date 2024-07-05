@@ -236,18 +236,32 @@
         <div class="input-group-right" style="margin-top: 320px">
             <label>Text Highlight: </label>
             <br />
-            <button @click="applyStyle({ highlight: undefined })">none</button>
+            <button @click="applyStyle({ highlight: undefined })" style="width: 110px">none</button>
+            <br />
             <button
                 @click="
                     applyStyle({
                         highlight: {
                             color: '#DAFF00',
+                            type: 'fill',
+                        },
+                    })
+                "
+            >
+                fill
+            </button>
+            <button
+                @click="
+                    applyStyle({
+                        highlight: {
+                            color: '#000000',
+                            type: 'oval',
                         },
                     })
                 "
                 style="margin-left: 5px"
             >
-                enable
+                oval
             </button>
         </div>
     </div>

@@ -302,66 +302,137 @@ export class TMRenderer implements IRenderer {
             if (character.style.highlight) {
                 if (!highlighted.has(characterIndex)) {
                     const highlightPaint = new CanvasKit.Paint();
-                    highlightPaint.setStyle(CanvasKit.PaintStyle.Fill);
                     highlightPaint.setColor(
                         CanvasKit.parseColorString(character.style.highlight.color)
                     );
                     let endCharacter = character;
+                    const highlightType = character.style.highlight.type;
+                    highlightPaint.setStyle(
+                        highlightType === 'fill'
+                            ? CanvasKit.PaintStyle.Fill
+                            : CanvasKit.PaintStyle.Stroke
+                    );
+                    if (highlightType === 'oval') {
+                        highlightPaint.setStrokeWidth(4);
+                        highlightPaint.setAntiAlias(true);
+                    }
                     for (
                         let index = characterIndex;
-                        index <= this._textMetrics!.allCharacter.length;
+                        index <= this._textMetrics!.allCharacter.length - 1;
                         index++
                     ) {
-                        if (this._textMetrics!.allCharacter[index].style.highlight) {
+                        const currentCharacter = this._textMetrics!.allCharacter[index];
+                        if (
+                            currentCharacter.style.highlight &&
+                            highlightType === currentCharacter.style.highlight.type
+                        ) {
                             highlighted.add(index);
-                            endCharacter = this._textMetrics!.allCharacter[index];
+                            endCharacter = currentCharacter;
                         } else {
                             break;
                         }
                     }
                     if (character.whichRow === endCharacter.whichRow) {
-                        this.canvas.drawRect4f(
-                            character.x,
-                            row.contentTop,
-                            endCharacter.x + endCharacter.width,
-                            row.contentTop + row.contentHeight,
-                            highlightPaint
-                        );
-                    } else {
-                        this.canvas.drawRect4f(
-                            character.x,
-                            row.contentTop,
-                            this._textMetrics!.allCharacter[row.endIndex].x +
-                                this._textMetrics!.allCharacter[row.endIndex].width,
-                            row.contentTop + row.contentHeight,
-                            highlightPaint
-                        );
-                        for (
-                            let index = character.whichRow + 1;
-                            index <= endCharacter.whichRow - 1;
-                            index++
-                        ) {
-                            const targetRow = this._textMetrics!.rows[index];
-                            const startCharacter =
-                                this._textMetrics!.allCharacter[targetRow.startIndex];
-                            const endCharacter =
-                                this._textMetrics!.allCharacter[targetRow.endIndex];
+                        if (highlightType === 'fill') {
                             this.canvas.drawRect4f(
-                                startCharacter.x,
-                                targetRow.contentTop,
+                                character.x,
+                                (row.contentTop + row.contentBottom) / 2,
                                 endCharacter.x + endCharacter.width,
-                                targetRow.contentTop + targetRow.contentHeight,
+                                row.contentTop + row.contentHeight,
+                                highlightPaint
+                            );
+                        } else {
+                            this.canvas.drawOval(
+                                CanvasKit.XYWHRect(
+                                    character.x,
+                                    row.contentTop,
+                                    endCharacter.x + endCharacter.width - character.x,
+                                    row.contentHeight
+                                ),
                                 highlightPaint
                             );
                         }
-                        const endRow = this._textMetrics!.rows[endCharacter.whichRow];
-                        this.canvas.drawRect4f(
-                            this._textMetrics!.allCharacter[endRow.startIndex].x,
-                            endRow.contentTop,
-                            endCharacter.x + endCharacter.width,
-                            endRow.contentTop + endRow.contentHeight,
-                            highlightPaint
-                        );
+                    } else {
+                        if (highlightType === 'fill') {
+                            this.canvas.drawRect4f(
+                                character.x,
+                                (row.contentTop + row.contentBottom) / 2,
+                                this._textMetrics!.allCharacter[row.endIndex].x +
+                                    this._textMetrics!.allCharacter[row.endIndex].width,
+                                row.contentTop + row.contentHeight,
+                                highlightPaint
+                            );
+                            for (
+                                let index = character.whichRow + 1;
+                                index <= endCharacter.whichRow - 1;
+                                index++
+                            ) {
+                                const targetRow = this._textMetrics!.rows[index];
+                                const startCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.startIndex];
+                                const endCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.endIndex];
+                                this.canvas.drawRect4f(
+                                    startCharacter.x,
+                                    (targetRow.contentTop + row.contentBottom) / 2,
+                                    endCharacter.x + endCharacter.width,
+                                    targetRow.contentTop + targetRow.contentHeight,
+                                    highlightPaint
+                                );
+                            }
+                            const endRow = this._textMetrics!.rows[endCharacter.whichRow];
+                            this.canvas.drawRect4f(
+                                this._textMetrics!.allCharacter[endRow.startIndex].x,
+                                (endRow.contentTop + endRow.contentBottom) / 2,
+                                endCharacter.x + endCharacter.width,
+                                endRow.contentTop + endRow.contentHeight,
+                                highlightPaint
+                            );
+                        } else {
+                            this.canvas.drawOval(
+                                CanvasKit.XYWHRect(
+                                    character.x,
+                                    row.contentTop,
+                                    this._textMetrics!.allCharacter[row.endIndex].x +
+                                        this._textMetrics!.allCharacter[row.endIndex].width -
+                                        character.x,
+                                    row.contentHeight
+                                ),
+                                highlightPaint
+                            );
+                            for (
+                                let index = character.whichRow + 1;
+                                index <= endCharacter.whichRow - 1;
+                                index++
+                            ) {
+                                const targetRow = this._textMetrics!.rows[index];
+                                const startCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.startIndex];
+                                const endCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.endIndex];
+                                this.canvas.drawOval(
+                                    CanvasKit.XYWHRect(
+                                        startCharacter.x,
+                                        targetRow.contentTop,
+                                        endCharacter.x + endCharacter.width - startCharacter.x,
+                                        targetRow.contentHeight
+                                    ),
+                                    highlightPaint
+                                );
+                            }
+                            const endRow = this._textMetrics!.rows[endCharacter.whichRow];
+                            this.canvas.drawOval(
+                                CanvasKit.XYWHRect(
+                                    this._textMetrics!.allCharacter[endRow.startIndex].x,
+                                    endRow.contentTop,
+                                    endCharacter.x +
+                                        endCharacter.width -
+                                        this._textMetrics!.allCharacter[endRow.startIndex].x,
+                                    endRow.contentHeight
+                                ),
+                                highlightPaint
+                            );
+                        }
                     }
                     highlightPaint.delete();
                 }

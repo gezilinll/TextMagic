@@ -55,6 +55,7 @@ export interface TMTextBlurStyle {
 }
 export interface TMTextHighlightStyle {
     color: string;
+    type: 'fill' | 'oval';
 }
 export interface TMTextDecorationStyle {
     line: 'underline' | 'line-through';
