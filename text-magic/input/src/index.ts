@@ -711,29 +711,25 @@ export class TMInput implements IInput {
         const selectRange = this._getSelectRange();
         const rangeIsValid = selectRange.start !== -1 && selectRange.end !== -1;
         if (e.code === 'ArrowUp') {
-            const startCharacterIndex = rangeIsValid
-                ? selectRange.start - 1
-                : this._cursorInfo.afterCharacterIndex;
-            const startCharacter = this._textMetrics.allCharacter[startCharacterIndex];
-            const rowIndex = startCharacter?.whichRow ?? 0;
-            const startRow = this._textMetrics.rows[rowIndex];
-            let newCursor: TMCursorInfo;
-            if (rowIndex === 0) {
-                newCursor = {
-                    afterCharacterIndex: -1,
-                    cursorPosition: 'after-index',
-                };
+            const targetCoordinate: { x: number; y: number } = { x: 0, y: 0 };
+            if (rangeIsValid) {
+                const startCharacter = this._textMetrics.allCharacter[selectRange.start];
+                const rowIndex = startCharacter.whichRow;
+                const startRow = this._textMetrics.rows[rowIndex];
+                targetCoordinate.x = startCharacter.x;
+                targetCoordinate.y = startRow.top - 2;
             } else {
-                newCursor = this.getCursorByCoordinate(
-                    startCharacter ? startCharacter.x + startCharacter.width : 0,
-                    startRow.top - 2
-                );
-                if (
-                    this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
-                    newCursor.afterCharacterIndex - 1 >= 0
-                ) {
-                    newCursor.afterCharacterIndex--;
-                }
+                const cursorRenderInfo = this._getCursorRenderInfo();
+                targetCoordinate.x = cursorRenderInfo.x;
+                targetCoordinate.y = cursorRenderInfo.y - 2;
+            }
+            const newCursor = this.getCursorByCoordinate(targetCoordinate.x, targetCoordinate.y);
+            if (
+                newCursor.afterCharacterIndex > 0 &&
+                this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
+                newCursor.afterCharacterIndex - 1 >= 0
+            ) {
+                newCursor.afterCharacterIndex--;
             }
             if (e.shiftKey) {
                 if (rangeIsValid) {
@@ -752,26 +748,24 @@ export class TMInput implements IInput {
                 this._showCursor();
             }
         } else if (e.code === 'ArrowDown') {
-            const endCharacterIndex = rangeIsValid
-                ? selectRange.end
-                : this._cursorInfo.afterCharacterIndex;
-            const endCharacter = this._textMetrics.allCharacter[endCharacterIndex];
-            const rowIndex = endCharacter?.whichRow ?? 0;
-            const endRow = this._textMetrics.rows[rowIndex];
-            let newCursor: TMCursorInfo;
-            if (rowIndex === this._textMetrics.rows.length - 1) {
-                newCursor = {
-                    afterCharacterIndex: this._textMetrics.allCharacter.length - 1,
-                    cursorPosition: 'after-index',
-                };
+            const targetCoordinate: { x: number; y: number } = { x: 0, y: 0 };
+            if (rangeIsValid) {
+                const endCharacter = this._textMetrics.allCharacter[selectRange.end];
+                const rowIndex = endCharacter.whichRow;
+                const endRow = this._textMetrics.rows[rowIndex];
+                targetCoordinate.x = endCharacter.x + endCharacter.width;
+                targetCoordinate.y = endRow.bottom + 2;
             } else {
-                newCursor = this.getCursorByCoordinate(endCharacter?.x ?? 0, endRow.bottom + 2);
-                if (
-                    this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
-                    newCursor.afterCharacterIndex + 1 <= this._textMetrics.allCharacter.length - 1
-                ) {
-                    newCursor.afterCharacterIndex++;
-                }
+                const cursorRenderInfo = this._getCursorRenderInfo();
+                targetCoordinate.x = cursorRenderInfo.x;
+                targetCoordinate.y = cursorRenderInfo.y + cursorRenderInfo.height + 2;
+            }
+            const newCursor = this.getCursorByCoordinate(targetCoordinate.x, targetCoordinate.y);
+            if (
+                this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
+                newCursor.afterCharacterIndex + 1 <= this._textMetrics.allCharacter.length - 1
+            ) {
+                newCursor.afterCharacterIndex++;
             }
             if (e.shiftKey) {
                 if (rangeIsValid) {
