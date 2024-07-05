@@ -64,6 +64,7 @@ export class TMInput implements IInput {
         this._textArea.style.zIndex = '-9999';
         this._textArea.style.width = '0px';
         this._textArea.style.height = '0px';
+        this._textArea.style.caretColor = 'transparent';
         this._textArea.addEventListener('input', (event) => {
             if ((event as InputEvent).data && !this._compositionData) {
                 this._handleInput((event as InputEvent).data!);
@@ -129,6 +130,13 @@ export class TMInput implements IInput {
         this._renderer
             .getContainer()
             .addEventListener('mousemove', this._handleMouseMove.bind(this));
+        this._renderer.getContainer().addEventListener('click', () => {
+            // https://github.com/jquery-archive/jquery-mobile/issues/3016
+            const range = this._getSelectRange();
+            if (range.start === -1 && range.end === -1) {
+                this._textArea.focus();
+            }
+        });
         this._renderer.getContainer().addEventListener('mouseup', this._handleMouseUp.bind(this));
 
         this._renderer.getContainer().appendChild(this._textArea);

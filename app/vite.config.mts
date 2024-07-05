@@ -7,4 +7,8 @@ import viteCompression from 'vite-plugin-compression';
 export default defineConfig({
     base: '/',
     plugins: [vue(), viteCompression(), visualizer()],
+    server: {
+        host: '0.0.0.0',
+        port: 3000,
+    },
 });
