@@ -166,6 +166,12 @@ export class TMInput implements IInput {
                 cursorPosition: 'after-index',
             };
         }
+        if (mouseY < 0) {
+            return {
+                afterCharacterIndex: -1,
+                cursorPosition: 'after-index',
+            };
+        }
         let result = -1;
         for (let i = 0; i < this._textMetrics.allCharacter.length; i++) {
             const bound = this._textMetrics.allCharacter[i];
@@ -220,7 +226,10 @@ export class TMInput implements IInput {
         } else {
             return {
                 afterCharacterIndex:
-                    mouseX < targetBound.x + targetBound.width / 2 ? result - 1 : result,
+                    mouseY <= this._textMetrics.rows[this._textMetrics.rows.length - 1].bottom &&
+                    mouseX < targetBound.x + targetBound.width / 2
+                        ? result - 1
+                        : result,
                 cursorPosition: 'after-index',
             };
         }
@@ -754,7 +763,7 @@ export class TMInput implements IInput {
                 const rowIndex = endCharacter.whichRow;
                 const endRow = this._textMetrics.rows[rowIndex];
                 targetCoordinate.x = endCharacter.x + endCharacter.width;
-                targetCoordinate.y = endRow.bottom + 2;
+                targetCoordinate.y = endRow.bottom + 5;
             } else {
                 const cursorRenderInfo = this._getCursorRenderInfo();
                 targetCoordinate.x = cursorRenderInfo.x;
