@@ -253,7 +253,13 @@ export class TMInput implements IInput {
         this.focus();
     }
 
-    private _getCursorRenderInfo(): { x: number; y: number; height: number } {
+    private _getCursorRenderInfo(): {
+        x: number;
+        y: number;
+        height: number;
+        rowTop: number;
+        rowBottom: number;
+    } {
         const getXBeforeZeroOrNewLine = (character?: TMCharacterMetrics) => {
             if (character) {
                 return character.x;
@@ -274,7 +280,9 @@ export class TMInput implements IInput {
             return {
                 x: getXBeforeZeroOrNewLine(),
                 y: 0,
+                rowTop: 0,
                 height: this._defaultOptions.fontSize * this.devicePixelRatio,
+                rowBottom: this._defaultOptions.fontSize * this.devicePixelRatio,
             };
         }
         if (this._cursorInfo.afterCharacterIndex < 0 && this._textMetrics.allCharacter.length > 0) {
@@ -282,6 +290,8 @@ export class TMInput implements IInput {
             return {
                 x: getXBeforeZeroOrNewLine(nextCharacter),
                 y: 0,
+                rowTop: this._textMetrics.rows[nextCharacter.whichRow].top,
+                rowBottom: this._textMetrics.rows[nextCharacter.whichRow].bottom,
                 height: this._textMetrics.rows[nextCharacter.whichRow].contentHeight,
             };
         }
@@ -302,6 +312,12 @@ export class TMInput implements IInput {
                     character.char === '\n'
                         ? row.bottom + this._textData.paragraphSpacing
                         : row.contentTop,
+                rowTop: character.char === '\n' ? row.bottom : row.top,
+                rowBottom:
+                    character.char === '\n' &&
+                    character.whichRow + 1 <= this._textMetrics.rows.length - 1
+                        ? this._textMetrics.rows[character.whichRow + 1].bottom
+                        : row.bottom,
                 height:
                     character.char === '\n' &&
                     character.whichRow + 1 <= this._textMetrics.rows.length - 1
@@ -315,6 +331,8 @@ export class TMInput implements IInput {
             return {
                 x: nextCharacter.x,
                 y: row.contentTop,
+                rowTop: row.top,
+                rowBottom: row.bottom,
                 height: row.contentHeight,
             };
         }
@@ -738,7 +756,7 @@ export class TMInput implements IInput {
             } else {
                 const cursorRenderInfo = this._getCursorRenderInfo();
                 targetCoordinate.x = cursorRenderInfo.x;
-                targetCoordinate.y = cursorRenderInfo.y - 2;
+                targetCoordinate.y = cursorRenderInfo.rowTop - 2;
             }
             const newCursor = this.getCursorByCoordinate(targetCoordinate.x, targetCoordinate.y);
             if (
