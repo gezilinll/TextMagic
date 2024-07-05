@@ -254,7 +254,7 @@
                 @click="
                     applyStyle({
                         highlight: {
-                            color: '#000000',
+                            color: '#666666',
                             type: 'oval',
                         },
                     })
@@ -262,6 +262,19 @@
                 style="margin-left: 5px"
             >
                 oval
+            </button>
+            <button
+                @click="
+                    applyStyle({
+                        highlight: {
+                            color: '#FF0000',
+                            type: 'x',
+                        },
+                    })
+                "
+                style="margin-left: 5px"
+            >
+                x
             </button>
         </div>
     </div>

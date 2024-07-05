@@ -312,7 +312,7 @@ export class TMRenderer implements IRenderer {
                             ? CanvasKit.PaintStyle.Fill
                             : CanvasKit.PaintStyle.Stroke
                     );
-                    if (highlightType === 'oval') {
+                    if (highlightType !== 'fill') {
                         highlightPaint.setStrokeWidth(4);
                         highlightPaint.setAntiAlias(true);
                     }
@@ -341,7 +341,7 @@ export class TMRenderer implements IRenderer {
                                 row.contentTop + row.contentHeight,
                                 highlightPaint
                             );
-                        } else {
+                        } else if (highlightType === 'oval') {
                             this.canvas.drawOval(
                                 CanvasKit.XYWHRect(
                                     character.x,
@@ -349,6 +349,21 @@ export class TMRenderer implements IRenderer {
                                     endCharacter.x + endCharacter.width - character.x,
                                     row.contentHeight
                                 ),
+                                highlightPaint
+                            );
+                        } else if (highlightType === 'x') {
+                            this.canvas.drawLine(
+                                character.x,
+                                row.contentTop + row.contentHeight / 4,
+                                endCharacter.x + endCharacter.width,
+                                row.contentTop + row.contentHeight,
+                                highlightPaint
+                            );
+                            this.canvas.drawLine(
+                                character.x,
+                                row.contentTop + row.contentHeight,
+                                endCharacter.x + endCharacter.width,
+                                row.contentTop + row.contentHeight / 4,
                                 highlightPaint
                             );
                         }
@@ -388,7 +403,7 @@ export class TMRenderer implements IRenderer {
                                 endRow.contentTop + endRow.contentHeight,
                                 highlightPaint
                             );
-                        } else {
+                        } else if (highlightType === 'oval') {
                             this.canvas.drawOval(
                                 CanvasKit.XYWHRect(
                                     character.x,
@@ -430,6 +445,64 @@ export class TMRenderer implements IRenderer {
                                         this._textMetrics!.allCharacter[endRow.startIndex].x,
                                     endRow.contentHeight
                                 ),
+                                highlightPaint
+                            );
+                        } else if (highlightType === 'x') {
+                            this.canvas.drawLine(
+                                character.x,
+                                row.contentTop + row.height / 4,
+                                this._textMetrics!.allCharacter[row.endIndex].x +
+                                    this._textMetrics!.allCharacter[row.endIndex].width,
+                                row.contentBottom,
+                                highlightPaint
+                            );
+                            this.canvas.drawLine(
+                                character.x,
+                                row.contentBottom,
+                                this._textMetrics!.allCharacter[row.endIndex].x +
+                                    this._textMetrics!.allCharacter[row.endIndex].width,
+                                row.contentTop + row.contentHeight / 4,
+                                highlightPaint
+                            );
+                            for (
+                                let index = character.whichRow + 1;
+                                index <= endCharacter.whichRow - 1;
+                                index++
+                            ) {
+                                const targetRow = this._textMetrics!.rows[index];
+                                const startCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.startIndex];
+                                const endCharacter =
+                                    this._textMetrics!.allCharacter[targetRow.endIndex];
+                                this.canvas.drawLine(
+                                    startCharacter.x,
+                                    targetRow.contentTop + targetRow.contentHeight / 4,
+                                    endCharacter.x + endCharacter.width,
+                                    targetRow.contentBottom,
+                                    highlightPaint
+                                );
+                                this.canvas.drawLine(
+                                    character.x,
+                                    targetRow.contentBottom,
+                                    this._textMetrics!.allCharacter[targetRow.endIndex].x +
+                                        this._textMetrics!.allCharacter[targetRow.endIndex].width,
+                                    targetRow.contentTop + targetRow.contentHeight / 4,
+                                    highlightPaint
+                                );
+                            }
+                            const endRow = this._textMetrics!.rows[endCharacter.whichRow];
+                            this.canvas.drawLine(
+                                this._textMetrics!.allCharacter[endRow.startIndex].x,
+                                endRow.contentTop + endRow.height / 4,
+                                endCharacter.x + endCharacter.width,
+                                endRow.bottom,
+                                highlightPaint
+                            );
+                            this.canvas.drawLine(
+                                this._textMetrics!.allCharacter[endRow.startIndex].x,
+                                endRow.bottom,
+                                endCharacter.x + endCharacter.width,
+                                endRow.contentTop + endRow.height / 4,
                                 highlightPaint
                             );
                         }
