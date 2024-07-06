@@ -66,12 +66,15 @@ export interface TMTextDecorationStyle {
     thickness: number;
 }
 
+export type EmojiListStyle = string;
+export type ListStyle = 'disc' | 'decimal' | 'circle' | EmojiListStyle | undefined;
+
 export interface TMTextData {
     width: number;
     height: number;
     textAlign: 'left' | 'right' | 'center';
     paragraphSpacing: number;
-    listStyle?: 'disc' | 'decimal' | 'circle';
+    listStyle?: ListStyle;
     contents: string[];
     styles: TMTextStyle[];
 }

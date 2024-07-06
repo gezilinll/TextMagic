@@ -283,7 +283,10 @@
             <button @click="input.changeListStyle(undefined)" style="width: 110px">none</button>
             <br />
             <button @click="input.changeListStyle('disc')">disc</button>
+            <button @click="input.changeListStyle('decimal')">decimal</button>
             <button @click="input.changeListStyle('circle')">circle</button>
+            <br />
+            <button @click="input.changeListStyle('\ud83d\udc4d')">thumbs up</button>
         </div>
     </div>
 </template>

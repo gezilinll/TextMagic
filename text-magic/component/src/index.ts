@@ -1,4 +1,4 @@
-import { TMFontInfo, TMInputOptions, TMTextStyle } from '@text-magic/common';
+import { ListStyle, TMFontInfo, TMInputOptions, TMTextStyle } from '@text-magic/common';
 import { TMInput } from '@text-magic/input';
 import { TMRenderer } from '@text-magic/renderer';
 
@@ -31,7 +31,7 @@ export class MagicInput {
         this._input.blur();
     }
 
-    changeListStyle(style: 'disc' | 'decimal' | 'circle' | undefined) {
+    changeListStyle(style: ListStyle) {
         this._input.changeListStyle(style);
     }
 

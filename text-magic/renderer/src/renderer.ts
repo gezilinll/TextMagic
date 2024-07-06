@@ -1,4 +1,5 @@
 import {
+    ListStyle,
     TMCharacterMetrics,
     TMFontInfo,
     TMRenderer as IRenderer,
@@ -37,7 +38,8 @@ export class TMRenderer implements IRenderer {
     private _textMetrics: TMTextMetrics | null = null;
 
     private LIST_CANVAS_WIDTH = 40;
-    private _listStyleType: 'disc' | 'decimal' | 'circle' | undefined = undefined;
+    private LIST_EMOJI_FONT_SIZE = 30;
+    private _listStyleType: ListStyle = undefined;
 
     constructor() {
         this._root = document.createElement('div');
@@ -727,35 +729,46 @@ export class TMRenderer implements IRenderer {
         textPaint.delete();
 
         if (this._listStyleType) {
-            console.log('AAA', rowsForList);
             const paint = new CanvasKit.Paint();
             paint.setColor(CanvasKit.Color(0, 0, 0, 1.0));
             paint.setAntiAlias(true);
-            if (this._listStyleType === 'disc') {
-                paint.setStyle(CanvasKit.PaintStyle.Fill);
-            } else if (this._listStyleType === 'circle') {
+            let font: any = null;
+            if (this._listStyleType === 'circle') {
                 paint.setStyle(CanvasKit.PaintStyle.Stroke);
                 paint.setStrokeWidth(2);
+            } else if (this._listStyleType === 'disc' || typeof this._listStyleType === 'string') {
+                paint.setStyle(CanvasKit.PaintStyle.Fill);
+            }
+            if (typeof this._listStyleType === 'string' && this._emojiFontFamily) {
+                font = new CanvasKit.Font(
+                    this._typeFace.get(this._emojiFontFamily)!,
+                    this.LIST_EMOJI_FONT_SIZE * window.devicePixelRatio
+                );
             }
             rowsForList.forEach((row) => {
                 if (this._listStyleType === 'disc' || this._listStyleType === 'circle') {
-                    console.log(
-                        'drawCircle',
-                        (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2,
-                        (row.top + row.bottom) / 2
-                    );
                     this.listCanvas.drawCircle(
                         (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2,
                         (row.top + row.bottom) / 2,
                         20,
                         paint
                     );
+                } else if (typeof this._listStyleType === 'string') {
+                    this.listCanvas.drawText(
+                        this._listStyleType,
+                        (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2 -
+                            ((this.LIST_EMOJI_FONT_SIZE * window.devicePixelRatio) / 3) * 2,
+                        (row.top + row.bottom) / 2 +
+                            (this.LIST_EMOJI_FONT_SIZE * window.devicePixelRatio) / 3,
+                        paint,
+                        font
+                    );
                 }
             });
             this.listSurface.flush();
             paint.delete();
+            font?.delete();
         }
-        console.log('render', rowsForList);
     }
 
     isUseDevicePixelRatio(): boolean {

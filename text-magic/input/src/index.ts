@@ -1,4 +1,5 @@
 import {
+    ListStyle,
     TMCharacterMetrics,
     TMCursorInfo,
     TMInput as IInput,
@@ -482,7 +483,7 @@ export class TMInput implements IInput {
         this._refresh();
     }
 
-    changeListStyle(style: 'disc' | 'decimal' | 'circle' | undefined): void {
+    changeListStyle(style: ListStyle): void {
         this._textData.listStyle = style;
         this._refresh();
     }
