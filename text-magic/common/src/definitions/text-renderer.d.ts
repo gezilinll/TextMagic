@@ -12,7 +12,9 @@ export interface TMRenderer {
 
     registerFont(font: TMFontInfo);
 
-    getContainer(): HTMLDivElement;
+    getRootContainer(): HTMLDivElement;
+
+    getTextContainer(): HTMLDivElement;
 
     measure(data: TMTextData): TMTextMetrics;
 

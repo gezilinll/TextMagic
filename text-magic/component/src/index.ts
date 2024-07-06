@@ -52,6 +52,6 @@ export class MagicInput {
     }
 
     get element() {
-        return this._renderer.getContainer();
+        return this._renderer.getRootContainer();
     }
 }

@@ -23,10 +23,12 @@ export class TMRenderer implements IRenderer {
 
     private _root: HTMLDivElement;
     private _container: HTMLDivElement;
-    private _listCanvas: HTMLCanvasElement;
-    private _textCanvas: HTMLCanvasElement;
-    private _surface: Surface | null = null;
-    private _canvas: Canvas | null = null;
+    private _listCanvasElement: HTMLCanvasElement;
+    private _listSurface: Surface | null = null;
+    private _listCanvas: Canvas | null = null;
+    private _textCanvasElement: HTMLCanvasElement;
+    private _textSurface: Surface | null = null;
+    private _textCanvas: Canvas | null = null;
 
     private _paragraph: Paragraph | null = null;
 
@@ -34,11 +36,20 @@ export class TMRenderer implements IRenderer {
     private _emojiFontFamily: string | null = null;
     private _textMetrics: TMTextMetrics | null = null;
 
+    private LIST_CANVAS_WIDTH = 40;
+    private _listStyleType: 'disc' | 'decimal' | 'circle' | undefined = undefined;
+
     constructor() {
         this._root = document.createElement('div');
         this._root.style.position = 'relative';
         this._root.style.left = '0px';
         this._root.style.top = '0px';
+
+        this._listCanvasElement = document.createElement('canvas');
+        this._listCanvasElement.style.position = 'absolute';
+        this._listCanvasElement.style.left = '0px';
+        this._listCanvasElement.style.top = '0px';
+        this._root.appendChild(this._listCanvasElement);
 
         this._container = document.createElement('div');
         this._container.style.position = 'absolute';
@@ -46,24 +57,22 @@ export class TMRenderer implements IRenderer {
         this._container.style.top = '0px';
         this._root.appendChild(this._container);
 
-        this._textCanvas = document.createElement('canvas');
-        this._textCanvas.style.position = 'absolute';
-        this._textCanvas.style.left = '0px';
-        this._textCanvas.style.top = '0px';
-        this._container.appendChild(this._textCanvas);
-        this._listCanvas = document.createElement('canvas');
-        this._listCanvas.style.position = 'absolute';
-        this._listCanvas.style.left = '0px';
-        this._listCanvas.style.top = '0px';
-        this._root.appendChild(this._listCanvas);
+        this._textCanvasElement = document.createElement('canvas');
+        this._textCanvasElement.style.position = 'absolute';
+        this._textCanvasElement.style.left = '0px';
+        this._textCanvasElement.style.top = '0px';
+        this._container.appendChild(this._textCanvasElement);
     }
 
     async init(): Promise<boolean> {
         this.CanvasKit = await getCanvasKit();
         this.FontMgr = this.CanvasKit.TypefaceFontProvider.Make();
 
-        this._surface = this.CanvasKit.MakeCanvasSurface(this._textCanvas)!;
-        this._canvas = this._surface.getCanvas();
+        this._textSurface = this.CanvasKit.MakeCanvasSurface(this._textCanvasElement)!;
+        this._textCanvas = this._textSurface.getCanvas();
+
+        this._listSurface = this.CanvasKit.MakeCanvasSurface(this._listCanvasElement)!;
+        this._listCanvas = this._listSurface.getCanvas();
 
         return true;
     }
@@ -87,7 +96,11 @@ export class TMRenderer implements IRenderer {
         this._typeFace.set(font.family, CanvasKit.Typeface.MakeFreeTypeFaceFromData(font.data)!);
     }
 
-    getContainer(): HTMLDivElement {
+    getRootContainer(): HTMLDivElement {
+        return this._root;
+    }
+
+    getTextContainer(): HTMLDivElement {
         return this._container;
     }
 
@@ -169,6 +182,11 @@ export class TMRenderer implements IRenderer {
             this._paragraph.delete();
             this._paragraph = null;
         }
+        let realWidth = data.width;
+        this._listStyleType = data.listStyle;
+        if (this._listStyleType) {
+            realWidth = data.width - this.LIST_CANVAS_WIDTH;
+        }
         if (data.contents.length === 0) {
             return { width: 0, height: 0, allCharacter: [], rows: [] };
         }
@@ -204,7 +222,7 @@ export class TMRenderer implements IRenderer {
             builder.pop();
         });
         this._paragraph = builder.build();
-        this._paragraph.layout(data.width * window.devicePixelRatio);
+        this._paragraph.layout(realWidth * window.devicePixelRatio);
 
         const lineMetrics = this._paragraph.getLineMetrics();
         const rows: TMRowMetrics[] = [];
@@ -285,7 +303,7 @@ export class TMRenderer implements IRenderer {
 
         this._textMetrics = {
             rows,
-            width: data.width,
+            width: realWidth,
             height: data.height,
             allCharacter: characterBounds,
         };
@@ -295,7 +313,7 @@ export class TMRenderer implements IRenderer {
                 if (data.textAlign === 'right') {
                     const lastCharacter = this._textMetrics!.allCharacter[row.endIndex];
                     const offset =
-                        data.width * window.devicePixelRatio -
+                        realWidth * window.devicePixelRatio -
                         (lastCharacter.x + lastCharacter.width);
                     for (let index = row.startIndex; index <= row.endIndex; index++) {
                         this._textMetrics!.allCharacter[index].x += offset;
@@ -305,7 +323,7 @@ export class TMRenderer implements IRenderer {
                     const lastCharacter = this._textMetrics!.allCharacter[row.endIndex];
                     const leftOffset = firstCharacter.x;
                     const rightOffset =
-                        data.width * window.devicePixelRatio -
+                        realWidth * window.devicePixelRatio -
                         (lastCharacter.x + lastCharacter.width);
                     const offset = (rightOffset - leftOffset) / 2;
                     for (let index = row.startIndex; index <= row.endIndex; index++) {
@@ -321,22 +339,47 @@ export class TMRenderer implements IRenderer {
 
     render(width: number, height: number) {
         const CanvasKit = this.CanvasKit!;
-        this._container.style.width = `${width}px`;
-        this._container.style.height = `${height}px`;
-        this._textCanvas.width = width * window.devicePixelRatio;
-        this._textCanvas.height = height * window.devicePixelRatio;
-        this._textCanvas.style.width = `${width}px`;
-        this._textCanvas.style.height = `${height}px`;
+        if (this._listStyleType) {
+            this._container.style.left = `${this.LIST_CANVAS_WIDTH}px`;
+            this._container.style.width = `${width - this.LIST_CANVAS_WIDTH}px`;
+            this._container.style.height = `${height}px`;
+            this._textCanvasElement.width =
+                (width - this.LIST_CANVAS_WIDTH) * window.devicePixelRatio;
+            this._textCanvasElement.height = height * window.devicePixelRatio;
+            this._textCanvasElement.style.width = `${width - this.LIST_CANVAS_WIDTH}px`;
+            this._textCanvasElement.style.height = `${height}px`;
+            this._listCanvasElement.width = this.LIST_CANVAS_WIDTH * window.devicePixelRatio;
+            this._listCanvasElement.height = height * window.devicePixelRatio;
+            this._listCanvasElement.style.width = `${this.LIST_CANVAS_WIDTH}px`;
+            this._listCanvasElement.style.height = `${height}px`;
+        } else {
+            this._container.style.left = '0px';
+            this._container.style.width = `${width}px`;
+            this._container.style.height = `${height}px`;
+            this._textCanvasElement.width = width * window.devicePixelRatio;
+            this._textCanvasElement.height = height * window.devicePixelRatio;
+            this._textCanvasElement.style.width = `${width}px`;
+            this._textCanvasElement.style.height = `${height}px`;
+            this._listCanvasElement.width = 0;
+            this._listCanvasElement.height = 0;
+            this._listCanvasElement.style.width = '0px';
+            this._listCanvasElement.style.height = '0px';
+        }
 
         if (!this._paragraph || !this._textMetrics) {
-            this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
-            this.surface.flush();
+            this.textCanvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
+            this.textSurface.flush();
+            this.listCanvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
+            this.listSurface.flush();
             return;
         }
 
-        this._surface = CanvasKit.MakeCanvasSurface(this._textCanvas)!;
-        this._canvas = this._surface.getCanvas();
-        this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
+        this._textSurface = CanvasKit.MakeCanvasSurface(this._textCanvasElement)!;
+        this._textCanvas = this._textSurface.getCanvas();
+        this.textCanvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
+        this._listSurface = CanvasKit.MakeCanvasSurface(this._listCanvasElement)!;
+        this._listCanvas = this._listSurface.getCanvas();
+        this.listCanvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
 
         const textPaint = new CanvasKit.Paint();
         textPaint.setAntiAlias(true);
@@ -344,6 +387,7 @@ export class TMRenderer implements IRenderer {
         const lineMetrics = this._paragraph.getLineMetrics();
         const highlighted: Set<number> = new Set();
         let characterIndex = 0;
+        const rowsForList: TMRowMetrics[] = [];
         this._textMetrics!.allCharacter.forEach((character) => {
             if (character.char === '\n') {
                 characterIndex++;
@@ -357,6 +401,12 @@ export class TMRenderer implements IRenderer {
                     ? (lineMetrics[character.whichRow].descent / 3) * 2
                     : lineMetrics[character.whichRow].descent);
             const row = this._textMetrics!.rows[character.whichRow];
+            if (
+                characterIndex === 0 ||
+                this._textMetrics!.allCharacter[characterIndex - 1].char === '\n'
+            ) {
+                rowsForList.push(row);
+            }
             if (character.style.highlight) {
                 if (!highlighted.has(characterIndex)) {
                     const highlightPaint = new CanvasKit.Paint();
@@ -392,7 +442,7 @@ export class TMRenderer implements IRenderer {
                     }
                     if (character.whichRow === endCharacter.whichRow) {
                         if (highlightType === 'fill') {
-                            this.canvas.drawRect4f(
+                            this.textCanvas.drawRect4f(
                                 character.x,
                                 (row.contentTop + row.contentBottom) / 2,
                                 endCharacter.x + endCharacter.width,
@@ -400,7 +450,7 @@ export class TMRenderer implements IRenderer {
                                 highlightPaint
                             );
                         } else if (highlightType === 'oval') {
-                            this.canvas.drawOval(
+                            this.textCanvas.drawOval(
                                 CanvasKit.XYWHRect(
                                     character.x,
                                     row.contentTop,
@@ -410,14 +460,14 @@ export class TMRenderer implements IRenderer {
                                 highlightPaint
                             );
                         } else if (highlightType === 'x') {
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 character.x,
                                 row.contentTop + row.contentHeight / 4,
                                 endCharacter.x + endCharacter.width,
                                 row.contentTop + row.contentHeight,
                                 highlightPaint
                             );
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 character.x,
                                 row.contentTop + row.contentHeight,
                                 endCharacter.x + endCharacter.width,
@@ -427,7 +477,7 @@ export class TMRenderer implements IRenderer {
                         }
                     } else {
                         if (highlightType === 'fill') {
-                            this.canvas.drawRect4f(
+                            this.textCanvas.drawRect4f(
                                 character.x,
                                 (row.contentTop + row.contentBottom) / 2,
                                 this._textMetrics!.allCharacter[row.endIndex].x +
@@ -445,7 +495,7 @@ export class TMRenderer implements IRenderer {
                                     this._textMetrics!.allCharacter[targetRow.startIndex];
                                 const endCharacter =
                                     this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.canvas.drawRect4f(
+                                this.textCanvas.drawRect4f(
                                     startCharacter.x,
                                     (targetRow.contentTop + row.contentBottom) / 2,
                                     endCharacter.x + endCharacter.width,
@@ -454,7 +504,7 @@ export class TMRenderer implements IRenderer {
                                 );
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
-                            this.canvas.drawRect4f(
+                            this.textCanvas.drawRect4f(
                                 this._textMetrics!.allCharacter[endRow.startIndex].x,
                                 (endRow.contentTop + endRow.contentBottom) / 2,
                                 endCharacter.x + endCharacter.width,
@@ -462,7 +512,7 @@ export class TMRenderer implements IRenderer {
                                 highlightPaint
                             );
                         } else if (highlightType === 'oval') {
-                            this.canvas.drawOval(
+                            this.textCanvas.drawOval(
                                 CanvasKit.XYWHRect(
                                     character.x,
                                     row.contentTop,
@@ -483,7 +533,7 @@ export class TMRenderer implements IRenderer {
                                     this._textMetrics!.allCharacter[targetRow.startIndex];
                                 const endCharacter =
                                     this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.canvas.drawOval(
+                                this.textCanvas.drawOval(
                                     CanvasKit.XYWHRect(
                                         startCharacter.x,
                                         targetRow.contentTop,
@@ -494,7 +544,7 @@ export class TMRenderer implements IRenderer {
                                 );
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
-                            this.canvas.drawOval(
+                            this.textCanvas.drawOval(
                                 CanvasKit.XYWHRect(
                                     this._textMetrics!.allCharacter[endRow.startIndex].x,
                                     endRow.contentTop,
@@ -506,7 +556,7 @@ export class TMRenderer implements IRenderer {
                                 highlightPaint
                             );
                         } else if (highlightType === 'x') {
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 character.x,
                                 row.contentTop + row.height / 4,
                                 this._textMetrics!.allCharacter[row.endIndex].x +
@@ -514,7 +564,7 @@ export class TMRenderer implements IRenderer {
                                 row.contentBottom,
                                 highlightPaint
                             );
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 character.x,
                                 row.contentBottom,
                                 this._textMetrics!.allCharacter[row.endIndex].x +
@@ -532,14 +582,14 @@ export class TMRenderer implements IRenderer {
                                     this._textMetrics!.allCharacter[targetRow.startIndex];
                                 const endCharacter =
                                     this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.canvas.drawLine(
+                                this.textCanvas.drawLine(
                                     startCharacter.x,
                                     targetRow.contentTop + targetRow.contentHeight / 4,
                                     endCharacter.x + endCharacter.width,
                                     targetRow.contentBottom,
                                     highlightPaint
                                 );
-                                this.canvas.drawLine(
+                                this.textCanvas.drawLine(
                                     character.x,
                                     targetRow.contentBottom,
                                     this._textMetrics!.allCharacter[targetRow.endIndex].x +
@@ -549,14 +599,14 @@ export class TMRenderer implements IRenderer {
                                 );
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 this._textMetrics!.allCharacter[endRow.startIndex].x,
                                 endRow.contentTop + endRow.height / 4,
                                 endCharacter.x + endCharacter.width,
                                 endRow.bottom,
                                 highlightPaint
                             );
-                            this.canvas.drawLine(
+                            this.textCanvas.drawLine(
                                 this._textMetrics!.allCharacter[endRow.startIndex].x,
                                 endRow.bottom,
                                 endCharacter.x + endCharacter.width,
@@ -598,7 +648,7 @@ export class TMRenderer implements IRenderer {
                     shadowPaint.setStyle(CanvasKit.PaintStyle.Stroke);
                     shadowPaint.setStrokeWidth(character.style.stroke.width);
                 }
-                this.canvas.drawText(character.char, character.x, drawTextY, shadowPaint, font);
+                this.textCanvas.drawText(character.char, character.x, drawTextY, shadowPaint, font);
                 shadowPaint.delete();
             }
             if (character.style.stroke) {
@@ -607,7 +657,7 @@ export class TMRenderer implements IRenderer {
                 strokePaint.setColor(CanvasKit.parseColorString(character.style.stroke.color));
                 strokePaint.setStyle(CanvasKit.PaintStyle.Stroke);
                 strokePaint.setStrokeWidth(character.style.stroke.width);
-                this.canvas.drawText(character.char, character.x, drawTextY, strokePaint, font);
+                this.textCanvas.drawText(character.char, character.x, drawTextY, strokePaint, font);
                 strokePaint.delete();
             }
 
@@ -623,7 +673,7 @@ export class TMRenderer implements IRenderer {
             } else {
                 textPaint.setMaskFilter(null);
             }
-            this.canvas.drawText(character.char, character.x, drawTextY, textPaint, font);
+            this.textCanvas.drawText(character.char, character.x, drawTextY, textPaint, font);
             if (character.style.decoration) {
                 const decorationPaint = new CanvasKit.Paint();
                 decorationPaint.setAntiAlias(true);
@@ -647,7 +697,7 @@ export class TMRenderer implements IRenderer {
                         character.style.decoration.thickness / 2;
                 }
                 if (character.style.decoration.style === 'solid') {
-                    this.canvas.drawLine(
+                    this.textCanvas.drawLine(
                         character.x,
                         yPosition,
                         character.x + character.width,
@@ -663,7 +713,7 @@ export class TMRenderer implements IRenderer {
                         const y = yPosition + amplitude * Math.sin(frequency * x);
                         path.lineTo(x, y);
                     }
-                    this.canvas.drawPath(path, decorationPaint);
+                    this.textCanvas.drawPath(path, decorationPaint);
                     path.delete();
                 }
                 decorationPaint.delete();
@@ -672,9 +722,40 @@ export class TMRenderer implements IRenderer {
             characterIndex++;
         });
 
-        this.surface.flush();
+        this.textSurface.flush();
 
         textPaint.delete();
+
+        if (this._listStyleType) {
+            console.log('AAA', rowsForList);
+            const paint = new CanvasKit.Paint();
+            paint.setColor(CanvasKit.Color(0, 0, 0, 1.0));
+            paint.setAntiAlias(true);
+            if (this._listStyleType === 'disc') {
+                paint.setStyle(CanvasKit.PaintStyle.Fill);
+            } else if (this._listStyleType === 'circle') {
+                paint.setStyle(CanvasKit.PaintStyle.Stroke);
+                paint.setStrokeWidth(2);
+            }
+            rowsForList.forEach((row) => {
+                if (this._listStyleType === 'disc' || this._listStyleType === 'circle') {
+                    console.log(
+                        'drawCircle',
+                        (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2,
+                        (row.top + row.bottom) / 2
+                    );
+                    this.listCanvas.drawCircle(
+                        (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2,
+                        (row.top + row.bottom) / 2,
+                        20,
+                        paint
+                    );
+                }
+            });
+            this.listSurface.flush();
+            paint.delete();
+        }
+        console.log('render', rowsForList);
     }
 
     isUseDevicePixelRatio(): boolean {
@@ -683,11 +764,19 @@ export class TMRenderer implements IRenderer {
 
     destroy() {}
 
-    private get surface() {
-        return this._surface!;
+    private get textSurface() {
+        return this._textSurface!;
     }
 
-    private get canvas() {
-        return this._canvas!;
+    private get textCanvas() {
+        return this._textCanvas!;
+    }
+
+    private get listSurface() {
+        return this._listSurface!;
+    }
+
+    private get listCanvas() {
+        return this._listCanvas!;
     }
 }

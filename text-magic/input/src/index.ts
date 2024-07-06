@@ -94,7 +94,7 @@ export class TMInput implements IInput {
             if (!this._renderer) {
                 return;
             }
-            const bound = this._renderer.getContainer().getBoundingClientRect();
+            const bound = this._renderer.getTextContainer().getBoundingClientRect();
             if (
                 event.clientX < bound.left ||
                 event.clientX > bound.right ||
@@ -129,25 +129,27 @@ export class TMInput implements IInput {
         const result = await this._renderer.init();
 
         this._renderer
-            .getContainer()
+            .getTextContainer()
             .addEventListener('mousedown', this._handleMouseDown.bind(this));
         this._renderer
-            .getContainer()
+            .getTextContainer()
             .addEventListener('mousemove', this._handleMouseMove.bind(this));
-        this._renderer.getContainer().addEventListener('click', () => {
+        this._renderer.getTextContainer().addEventListener('click', () => {
             // https://github.com/jquery-archive/jquery-mobile/issues/3016
             const range = this._getSelectRange();
             if (range.start === -1 && range.end === -1) {
                 this._textArea.focus();
             }
         });
-        this._renderer.getContainer().addEventListener('mouseup', this._handleMouseUp.bind(this));
+        this._renderer
+            .getTextContainer()
+            .addEventListener('mouseup', this._handleMouseUp.bind(this));
 
-        this._renderer.getContainer().appendChild(this._textArea);
+        this._renderer.getTextContainer().appendChild(this._textArea);
 
-        this._renderer.getContainer().appendChild(this._cursor);
+        this._renderer.getTextContainer().appendChild(this._cursor);
 
-        this._renderer.getContainer().appendChild(this._rangeCanvas);
+        this._renderer.getTextContainer().appendChild(this._rangeCanvas);
 
         return result;
     }

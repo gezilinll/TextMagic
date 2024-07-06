@@ -277,12 +277,13 @@
                 x
             </button>
         </div>
-        <div class="input-group-right" style="margin-top: 320px">
+        <div class="input-group-right" style="margin-top: 400px">
             <label>List Style: </label>
             <br />
             <button @click="input.changeListStyle(undefined)" style="width: 110px">none</button>
             <br />
             <button @click="input.changeListStyle('disc')">disc</button>
+            <button @click="input.changeListStyle('circle')">circle</button>
         </div>
     </div>
 </template>
