@@ -18,6 +18,7 @@ export interface TMRowMetrics {
 export interface TMCharacterMetrics {
     char: string;
     isEmoji: boolean;
+    isSurrogatePair: boolean;
     x: number;
     y: number;
     width: number;

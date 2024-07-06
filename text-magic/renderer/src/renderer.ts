@@ -249,6 +249,7 @@ export class TMRenderer implements IRenderer {
                 characterBounds.push({
                     char: emojis.get(i) ? content[i] + content[i + 1] : content[i],
                     isEmoji: emojis.get(i) ?? false,
+                    isSurrogatePair: emojis.get(i) ?? false,
                     x: glyphInfo.graphemeLayoutBounds[0],
                     y: offsetY + glyphInfo.graphemeLayoutBounds[1],
                     width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
