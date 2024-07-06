@@ -228,7 +228,10 @@ export class TMRenderer implements IRenderer {
 
         const lineMetrics = this._paragraph.getLineMetrics();
         const rows: TMRowMetrics[] = [];
-        lineMetrics.forEach((line) => {
+        lineMetrics.forEach((line, index) => {
+            if (line.width === 0 && index === lineMetrics.length - 1) {
+                return;
+            }
             const lastRow = rows[rows.length - 1];
             const top = lastRow ? lastRow.bottom : 0;
             const bottom = lastRow ? top + line.height + data.paragraphSpacing : line.height;
@@ -301,7 +304,9 @@ export class TMRenderer implements IRenderer {
                 glyphIndex++;
             }
         });
-        rows[rows.length - 1].endIndex = characterBounds.length - 1;
+        if (rows.length > 0) {
+            rows[rows.length - 1].endIndex = characterBounds.length - 1;
+        }
 
         this._textMetrics = {
             rows,
