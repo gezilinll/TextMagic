@@ -497,36 +497,47 @@ export class TMInput implements IInput {
             const endCharacter = this._textMetrics.allCharacter[range.end];
             if (startCharacter.whichContent === endCharacter.whichContent) {
                 const content = this._textData.contents[startCharacter.whichContent];
-                const baseStyle = this._textData.styles[startCharacter.whichContent];
-                this._textData.contents[startCharacter.whichContent] = content.slice(
-                    0,
-                    startCharacter.indexOfContent
-                );
-                this._textData.contents.splice(
-                    startCharacter.whichContent + 1,
-                    0,
-                    content.slice(
-                        startCharacter.indexOfContent,
-                        endCharacter.isSurrogatePair
-                            ? endCharacter.indexOfContent + 2
-                            : endCharacter.indexOfContent + 1
-                    )
-                );
-                this._textData.styles.splice(
-                    startCharacter.whichContent + 1,
-                    0,
-                    Object.assign(clone(baseStyle), style)
-                );
-                this._textData.contents.splice(
-                    startCharacter.whichContent + 2,
-                    0,
-                    content.slice(
-                        endCharacter.isSurrogatePair
-                            ? endCharacter.indexOfContent + 2
-                            : endCharacter.indexOfContent + 1
-                    )
-                );
-                this._textData.styles.splice(startCharacter.whichContent + 2, 0, clone(baseStyle));
+                if (
+                    startCharacter.indexOfContent === 0 &&
+                    endCharacter.indexOfContent === content.length - 1
+                ) {
+                    Object.assign(this._textData.styles[startCharacter.whichContent], style);
+                } else {
+                    const baseStyle = this._textData.styles[startCharacter.whichContent];
+                    this._textData.contents[startCharacter.whichContent] = content.slice(
+                        0,
+                        startCharacter.indexOfContent
+                    );
+                    this._textData.contents.splice(
+                        startCharacter.whichContent + 1,
+                        0,
+                        content.slice(
+                            startCharacter.indexOfContent,
+                            endCharacter.isSurrogatePair
+                                ? endCharacter.indexOfContent + 2
+                                : endCharacter.indexOfContent + 1
+                        )
+                    );
+                    this._textData.styles.splice(
+                        startCharacter.whichContent + 1,
+                        0,
+                        Object.assign(clone(baseStyle), style)
+                    );
+                    this._textData.contents.splice(
+                        startCharacter.whichContent + 2,
+                        0,
+                        content.slice(
+                            endCharacter.isSurrogatePair
+                                ? endCharacter.indexOfContent + 2
+                                : endCharacter.indexOfContent + 1
+                        )
+                    );
+                    this._textData.styles.splice(
+                        startCharacter.whichContent + 2,
+                        0,
+                        clone(baseStyle)
+                    );
+                }
             } else {
                 for (
                     let index = startCharacter.whichContent + 1;
