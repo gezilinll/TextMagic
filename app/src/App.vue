@@ -393,6 +393,13 @@ onMounted(async () => {
     const bound = root.value!.getBoundingClientRect();
     input.changeSize(bound.width, bound.height);
 
+    const resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+            input.changeSize(entry.contentRect.width, entry.contentRect.height);
+        }
+    });
+    resizeObserver.observe(root.value!);
+
     root.value!.appendChild(input.element);
     input.focus();
 
