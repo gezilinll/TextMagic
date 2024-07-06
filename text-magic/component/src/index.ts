@@ -15,6 +15,10 @@ export class MagicInput {
         return await this._input.init(this._renderer);
     }
 
+    setEmojiFont(font: TMFontInfo) {
+        this._renderer.setEmojiFont(font);
+    }
+
     registerFont(font: TMFontInfo) {
         return this._renderer.registerFont(font);
     }

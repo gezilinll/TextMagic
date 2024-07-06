@@ -25,6 +25,7 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "canvaskit-wasm": "^0.39.1"
+        "canvaskit-wasm": "^0.39.1",
+        "@text-magic/common": "workspace:*"
     }
 }

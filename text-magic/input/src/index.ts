@@ -575,6 +575,37 @@ export class TMInput implements IInput {
         }
     }
 
+    private getSurrogatePairEmojiLength(text: string) {
+        const emojiRegex = /\p{Emoji}/gu;
+        let match;
+        let result = 0;
+
+        while ((match = emojiRegex.exec(text)) !== null) {
+            const emoji = match[0];
+            const isSurrogatePair = emoji.length > 1;
+            if (isSurrogatePair) {
+                result++;
+            }
+        }
+
+        return result;
+    }
+
+    private extractEmojisWithDetails(text: string) {
+        const emojiRegex = /\p{Emoji}/gu;
+        let match;
+        const emojis: Map<number, boolean> = new Map();
+
+        while ((match = emojiRegex.exec(text)) !== null) {
+            const emoji = match[0];
+            const emojiStart = match.index;
+            const isSurrogatePair = emoji.length > 1;
+            emojis.set(emojiStart, isSurrogatePair);
+        }
+
+        return emojis;
+    }
+
     private _handleInput(data: string) {
         if (this._compositionData) {
             const character =
@@ -585,9 +616,17 @@ export class TMInput implements IInput {
                 const whichContent = character.whichContent;
                 const indexOfContent = character.indexOfContent;
                 const content = this._textData.contents[whichContent];
+                const emojis = this.extractEmojisWithDetails(content);
                 this._textData.contents[whichContent] =
-                    content.slice(0, indexOfContent + 1) +
-                    content.slice(indexOfContent + this._compositionData.content.length + 1);
+                    content.slice(
+                        0,
+                        emojis.get(indexOfContent) ? indexOfContent + 2 : indexOfContent + 1
+                    ) +
+                    content.slice(
+                        emojis.get(indexOfContent)
+                            ? indexOfContent + this._compositionData.content.length + 2
+                            : indexOfContent + this._compositionData.content.length + 1
+                    );
             } else if (this._textData.contents.length > 0) {
                 const content = this._textData.contents[0];
                 this._textData.contents[0] = content.slice(
@@ -600,7 +639,8 @@ export class TMInput implements IInput {
         this._insertToContentAtCursorPosition(data);
         this._textMetrics = this.renderer.measure(this._textData);
         this.renderer.render(this._textData.width, this._textData.height);
-        this._cursorInfo.afterCharacterIndex += data.length;
+        const SurrogatePairLength = this.getSurrogatePairEmojiLength(data);
+        this._cursorInfo.afterCharacterIndex += data.length - SurrogatePairLength;
         this._hideSelectRange();
         this._showCursor();
     }
@@ -632,16 +672,24 @@ export class TMInput implements IInput {
                     whichContent = character.whichContent;
                     indexOfContent = character.indexOfContent;
                     const content = this._textData.contents[whichContent];
-                    this._textData.contents[whichContent] =
-                        content.slice(0, indexOfContent + 1) +
-                        data +
-                        content.slice(indexOfContent + 1);
+                    const emojis = this.extractEmojisWithDetails(content);
+                    const a = content.slice(
+                        0,
+                        emojis.get(indexOfContent) ? indexOfContent + 2 : indexOfContent + 1
+                    );
+                    const b = content.slice(
+                        emojis.get(indexOfContent) ? indexOfContent + 2 : indexOfContent + 1
+                    );
+                    this._textData.contents[whichContent] = a + data + b;
                 }
             }
         }
     }
 
     private _handleKeyDown(e: KeyboardEvent) {
+        if (this._compositionData) {
+            return;
+        }
         if (e.code === 'Enter') {
             this._newLine();
             e.preventDefault();

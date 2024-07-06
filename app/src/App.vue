@@ -282,7 +282,7 @@
 
 <script setup lang="ts">
 import { TMTextStyle } from '@text-magic/common';
-import { DEFAULT_FONT_FAMILY, getDefaultFont } from '@text-magic/renderer';
+import { DEFAULT_FONT_FAMILY, getDefaultEmojiFont, getDefaultFont } from '@text-magic/renderer';
 import { MagicInput } from 'text-magic-input';
 import { onMounted, Ref, ref, watch } from 'vue';
 
@@ -384,6 +384,8 @@ onMounted(async () => {
     await input.init();
     const defaultFont = await getDefaultFont();
     input.registerFont(defaultFont);
+    const defaultEmojiFont = await getDefaultEmojiFont();
+    input.setEmojiFont(defaultEmojiFont);
 
     cancelAnimationFrame(animationId);
     root.value!.removeChild(loadingElement.value!);

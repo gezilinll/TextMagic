@@ -29,6 +29,7 @@ export class TMRenderer implements IRenderer {
     private _paragraph: Paragraph | null = null;
 
     private _typeFace: Map<string, Typeface> = new Map();
+    private _emojiFontFamily: string | null = null;
     private _textMetrics: TMTextMetrics | null = null;
 
     constructor() {
@@ -52,6 +53,16 @@ export class TMRenderer implements IRenderer {
         this._canvas = this._surface.getCanvas();
 
         return true;
+    }
+
+    setEmojiFont(font: TMFontInfo) {
+        this._emojiFontFamily = font.family;
+        if (this._typeFace.has(font.family)) {
+            return;
+        }
+        const CanvasKit = this.CanvasKit!;
+        this.FontMgr!.registerFont(font.data, font.family);
+        this._typeFace.set(font.family, CanvasKit.Typeface.MakeFreeTypeFaceFromData(font.data)!);
     }
 
     registerFont(font: TMFontInfo) {
@@ -125,6 +136,21 @@ export class TMRenderer implements IRenderer {
         return textAlign;
     }
 
+    private extractEmojisWithDetails(text: string) {
+        const emojiRegex = /\p{Emoji}/gu;
+        let match;
+        const emojis: Map<number, boolean> = new Map();
+
+        while ((match = emojiRegex.exec(text)) !== null) {
+            const emoji = match[0];
+            const emojiStart = match.index;
+            const isSurrogatePair = emoji.length > 1;
+            emojis.set(emojiStart, isSurrogatePair);
+        }
+
+        return emojis;
+    }
+
     measure(data: TMTextData) {
         if (this._paragraph) {
             this._paragraph.delete();
@@ -139,7 +165,9 @@ export class TMRenderer implements IRenderer {
         const paraStyle = new CanvasKit.ParagraphStyle({
             textStyle: {
                 color: CanvasKit.parseColorString(style.color),
-                fontFamilies: [style.fontFamily],
+                fontFamilies: this._emojiFontFamily
+                    ? [style.fontFamily, this._emojiFontFamily]
+                    : [style.fontFamily],
                 fontSize: style.fontSize * window.devicePixelRatio,
                 fontStyle: this._convertFontStyle(style.fontStyle, style.fontWeight),
             },
@@ -150,7 +178,9 @@ export class TMRenderer implements IRenderer {
             const style = data.styles[index];
             const textStyle = new CanvasKit.TextStyle({
                 color: CanvasKit.parseColorString(style.color),
-                fontFamilies: [style.fontFamily],
+                fontFamilies: this._emojiFontFamily
+                    ? [style.fontFamily, this._emojiFontFamily]
+                    : [style.fontFamily],
                 fontSize: style.fontSize * window.devicePixelRatio,
                 letterSpacing: style.letterSpacing,
                 heightMultiplier: style.lineHeight,
@@ -185,14 +215,16 @@ export class TMRenderer implements IRenderer {
         });
         let rowIndex = 0;
         let characterIndex = 0;
+        let glyphIndex = 0;
         let lastCharacterIsNewLine = false;
         data.contents.forEach((content, index) => {
+            const emojis = this.extractEmojisWithDetails(content);
             for (let i = 0; i < content.length; i++) {
                 let currentRow = rows[rowIndex];
                 if (currentRow.startIndex === -1) {
                     currentRow.startIndex = characterIndex;
                 }
-                const glyphInfo = this._paragraph!.getGlyphInfoAt(characterIndex)!;
+                const glyphInfo = this._paragraph!.getGlyphInfoAt(glyphIndex)!;
 
                 let offsetY = data.paragraphSpacing * rowIndex;
                 if (
@@ -213,8 +245,10 @@ export class TMRenderer implements IRenderer {
                     currentRow.startIndex = characterIndex;
                     lastCharacterIsNewLine = false;
                 }
+
                 characterBounds.push({
-                    char: content[i],
+                    char: emojis.get(i) ? content[i] + content[i + 1] : content[i],
+                    isEmoji: emojis.get(i) ?? false,
                     x: glyphInfo.graphemeLayoutBounds[0],
                     y: offsetY + glyphInfo.graphemeLayoutBounds[1],
                     width: glyphInfo.graphemeLayoutBounds[2] - glyphInfo.graphemeLayoutBounds[0],
@@ -225,7 +259,12 @@ export class TMRenderer implements IRenderer {
                     style: data.styles[index],
                 });
                 lastCharacterIsNewLine = content[i] === '\n';
+                if (emojis.get(i)) {
+                    i += 1;
+                    glyphIndex++;
+                }
                 characterIndex++;
+                glyphIndex++;
             }
         });
         rows[rows.length - 1].endIndex = characterBounds.length - 1;
@@ -263,6 +302,7 @@ export class TMRenderer implements IRenderer {
         }
 
         builder.delete();
+        console.log('measure', this._textMetrics);
         return this._textMetrics;
     }
 
@@ -511,12 +551,21 @@ export class TMRenderer implements IRenderer {
                 }
             }
 
-            const font = new CanvasKit.Font(
-                this._typeFace.get(character.style.fontFamily)!,
-                character.style.fontSize * window.devicePixelRatio
-            );
-            font.setEmbolden(character.style.fontWeight !== 'normal');
-            font.setSkewX(character.style.fontStyle === 'normal' ? 0 : -1 / 4);
+            let font;
+            if (character.isEmoji && this._emojiFontFamily) {
+                font = new CanvasKit.Font(
+                    this._typeFace.get(this._emojiFontFamily)!,
+                    character.style.fontSize * window.devicePixelRatio
+                );
+            } else {
+                font = new CanvasKit.Font(
+                    this._typeFace.get(character.style.fontFamily)!,
+                    character.style.fontSize * window.devicePixelRatio
+                );
+
+                font.setEmbolden(character.style.fontWeight !== 'normal');
+                font.setSkewX(character.style.fontStyle === 'normal' ? 0 : -1 / 4);
+            }
             if (character.style.shadow) {
                 const shadowPaint = new CanvasKit.Paint();
                 shadowPaint.setColor(CanvasKit.Color(255, 0, 0, 1.0));

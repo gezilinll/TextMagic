@@ -8,6 +8,8 @@ export interface TMFontInfo {
 export interface TMRenderer {
     init(): Promise<boolean>;
 
+    setEmojiFont(font: TMFontInfo);
+
     registerFont(font: TMFontInfo);
 
     getContainer(): HTMLDivElement;

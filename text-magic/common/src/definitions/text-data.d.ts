@@ -17,6 +17,7 @@ export interface TMRowMetrics {
 }
 export interface TMCharacterMetrics {
     char: string;
+    isEmoji: boolean;
     x: number;
     y: number;
     width: number;
@@ -69,6 +70,7 @@ export interface TMTextData {
     height: number;
     textAlign: 'left' | 'right' | 'center';
     paragraphSpacing: number;
+    listStyle?: 'disc' | 'decimal' | 'circle';
     contents: string[];
     styles: TMTextStyle[];
 }

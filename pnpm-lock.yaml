@@ -99,6 +99,9 @@ importers:
 
   text-magic/renderer:
     dependencies:
+      '@text-magic/common':
+        specifier: workspace:*
+        version: link:../common
       canvaskit-wasm:
         specifier: ^0.39.1
         version: 0.39.1

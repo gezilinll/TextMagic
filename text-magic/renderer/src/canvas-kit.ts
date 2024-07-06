@@ -4,7 +4,9 @@ import { CanvasKit } from 'canvaskit-wasm';
 
 let CANVAS_KIT: CanvasKit | null = null;
 let DEFAULT_FONT: ArrayBuffer | null = null;
+let DEFAULT_EMOJI_FONT: ArrayBuffer | null = null;
 export const DEFAULT_FONT_FAMILY = 'default-font-family';
+export const DEFAULT_EMOJI_FONT_FAMILY = 'default-emoji-font-family';
 
 export async function getCanvasKit() {
     if (CANVAS_KIT) {
@@ -25,4 +27,14 @@ export async function getDefaultFont(): Promise<TMFontInfo> {
         'https://zf.sc.chinaz.com/Files/DownLoad/upload/2024/0627/zaozigongfangxinranti.otf'
     ).then((response) => response.arrayBuffer());
     return { data: DEFAULT_FONT!, family: DEFAULT_FONT_FAMILY };
+}
+
+export async function getDefaultEmojiFont(): Promise<TMFontInfo> {
+    if (DEFAULT_EMOJI_FONT) {
+        return { data: DEFAULT_EMOJI_FONT, family: DEFAULT_FONT_FAMILY };
+    }
+    DEFAULT_EMOJI_FONT = await fetch(
+        'https://www.gezilinll.com/resources/NotoColorEmoji-Regular.ttf'
+    ).then((response) => response.arrayBuffer());
+    return { data: DEFAULT_EMOJI_FONT!, family: DEFAULT_EMOJI_FONT_FAMILY };
 }
