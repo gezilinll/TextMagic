@@ -302,7 +302,6 @@ export class TMRenderer implements IRenderer {
         }
 
         builder.delete();
-        console.log('measure', this._textMetrics);
         return this._textMetrics;
     }
 
@@ -336,8 +335,13 @@ export class TMRenderer implements IRenderer {
                 characterIndex++;
                 return;
             }
+            // todo: emoji descent(if you input emoji first and then input normal character, you will find out the emoji will jump one time)
             const drawTextY =
-                character.y + character.height - lineMetrics[character.whichRow].descent;
+                character.y +
+                character.height -
+                (character.isEmoji
+                    ? (lineMetrics[character.whichRow].descent / 3) * 2
+                    : lineMetrics[character.whichRow].descent);
             const row = this._textMetrics!.rows[character.whichRow];
             if (character.style.highlight) {
                 if (!highlighted.has(characterIndex)) {

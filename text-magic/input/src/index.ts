@@ -494,14 +494,22 @@ export class TMInput implements IInput {
             if (startCharacter.whichContent === endCharacter.whichContent) {
                 const content = this._textData.contents[startCharacter.whichContent];
                 const baseStyle = this._textData.styles[startCharacter.whichContent];
+                const realStartIndex = this._correctIndexOfContent(
+                    content,
+                    startCharacter.indexOfContent
+                );
+                const realEndIndex = this._correctIndexOfContent(
+                    content,
+                    endCharacter.indexOfContent
+                );
                 this._textData.contents[startCharacter.whichContent] = content.slice(
                     0,
-                    startCharacter.indexOfContent
+                    realStartIndex.start
                 );
                 this._textData.contents.splice(
                     startCharacter.whichContent + 1,
                     0,
-                    content.slice(startCharacter.indexOfContent, endCharacter.indexOfContent + 1)
+                    content.slice(realStartIndex.start, realEndIndex.end + 1)
                 );
                 this._textData.styles.splice(
                     startCharacter.whichContent + 1,
@@ -511,7 +519,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(
                     startCharacter.whichContent + 2,
                     0,
-                    content.slice(endCharacter.indexOfContent + 1)
+                    content.slice(realEndIndex.end + 1)
                 );
                 this._textData.styles.splice(startCharacter.whichContent + 2, 0, clone(baseStyle));
             } else {
@@ -526,17 +534,25 @@ export class TMInput implements IInput {
                 const startStyle = clone(this._textData.styles[startCharacter.whichContent]);
                 const endContent = this._textData.contents[endCharacter.whichContent];
                 const endStyle = clone(this._textData.styles[endCharacter.whichContent]);
-                this._textData.contents[startCharacter.whichContent] = startContent.slice(
-                    0,
+                const realStartIndex = this._correctIndexOfContent(
+                    startContent,
                     startCharacter.indexOfContent
                 );
+                const realEndIndex = this._correctIndexOfContent(
+                    endContent,
+                    endCharacter.indexOfContent
+                );
+                this._textData.contents[startCharacter.whichContent] = startContent.slice(
+                    0,
+                    realStartIndex.start
+                );
                 this._textData.contents[endCharacter.whichContent] = endContent.slice(
-                    endCharacter.indexOfContent + 1
+                    realEndIndex.end + 1
                 );
                 this._textData.contents.splice(
                     startCharacter.whichContent + 1,
                     0,
-                    startContent.slice(startCharacter.indexOfContent)
+                    startContent.slice(realStartIndex.start)
                 );
                 this._textData.styles.splice(
                     startCharacter.whichContent + 1,
@@ -546,7 +562,7 @@ export class TMInput implements IInput {
                 this._textData.contents.splice(
                     endCharacter.whichContent + 1,
                     0,
-                    endContent.slice(0, endCharacter.indexOfContent + 1)
+                    endContent.slice(0, realEndIndex.end + 1)
                 );
                 this._textData.styles.splice(
                     endCharacter.whichContent + 1,
@@ -604,6 +620,17 @@ export class TMInput implements IInput {
         }
 
         return emojis;
+    }
+
+    private _correctIndexOfContent(content: string, targetIndex: number) {
+        const emojis = this.extractEmojisWithDetails(content);
+        if (emojis.get(targetIndex)) {
+            return { start: targetIndex, end: targetIndex + 1 };
+        } else if (emojis.get(targetIndex - 1)) {
+            return { start: targetIndex - 1, end: targetIndex };
+        } else {
+            return { start: targetIndex, end: targetIndex };
+        }
     }
 
     private _handleInput(data: string) {
