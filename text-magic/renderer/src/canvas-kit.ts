@@ -34,7 +34,7 @@ export async function getDefaultEmojiFont(): Promise<TMFontInfo> {
         return { data: DEFAULT_EMOJI_FONT, family: DEFAULT_FONT_FAMILY };
     }
     DEFAULT_EMOJI_FONT = await fetch(
-        'https://www.gezilinll.com/resources/NotoColorEmoji-Regular.ttf'
+        'https://www.gezilinll.com/resources/Noto-COLRv1-emojicompat.ttf'
     ).then((response) => response.arrayBuffer());
     return { data: DEFAULT_EMOJI_FONT!, family: DEFAULT_EMOJI_FONT_FAMILY };
 }

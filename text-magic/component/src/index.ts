@@ -31,6 +31,10 @@ export class MagicInput {
         this._input.blur();
     }
 
+    changeListStyle(style: 'disc' | 'decimal' | 'circle' | undefined) {
+        this._input.changeListStyle(style);
+    }
+
     changeSize(width: number, height: number): void {
         this._input.changeSize(width, height);
     }

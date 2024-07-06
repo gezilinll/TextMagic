@@ -480,6 +480,11 @@ export class TMInput implements IInput {
         this._refresh();
     }
 
+    changeListStyle(style: 'disc' | 'decimal' | 'circle' | undefined): void {
+        this._textData.listStyle = style;
+        this._refresh();
+    }
+
     changeTextAlign(align: 'left' | 'right' | 'center'): void {
         this._textData.textAlign = align;
         this._refresh();

@@ -28,6 +28,8 @@ export interface TMInput {
 
     getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo;
 
+    changeListStyle(style: 'disc' | 'decimal' | 'circle' | undefined): void;
+
     changeSize(width: number, height: number): void;
 
     changeTextAlign(align: 'left' | 'right' | 'center'): void;

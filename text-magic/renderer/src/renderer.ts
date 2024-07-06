@@ -21,8 +21,10 @@ export class TMRenderer implements IRenderer {
     private CanvasKit: CanvasKit | null = null;
     private FontMgr: TypefaceFontProvider | null = null;
 
+    private _root: HTMLDivElement;
     private _container: HTMLDivElement;
-    private _canvasElement: HTMLCanvasElement;
+    private _listCanvas: HTMLCanvasElement;
+    private _textCanvas: HTMLCanvasElement;
     private _surface: Surface | null = null;
     private _canvas: Canvas | null = null;
 
@@ -33,23 +35,34 @@ export class TMRenderer implements IRenderer {
     private _textMetrics: TMTextMetrics | null = null;
 
     constructor() {
-        this._container = document.createElement('div');
+        this._root = document.createElement('div');
+        this._root.style.position = 'relative';
+        this._root.style.left = '0px';
+        this._root.style.top = '0px';
 
-        this._canvasElement = document.createElement('canvas');
-        this._canvasElement.style.position = 'absolute';
-        this._canvasElement.style.left = '0px';
-        this._canvasElement.style.top = '0px';
-        this._container.appendChild(this._canvasElement);
-        this._container.style.position = 'relative';
+        this._container = document.createElement('div');
+        this._container.style.position = 'absolute';
         this._container.style.left = '0px';
         this._container.style.top = '0px';
+        this._root.appendChild(this._container);
+
+        this._textCanvas = document.createElement('canvas');
+        this._textCanvas.style.position = 'absolute';
+        this._textCanvas.style.left = '0px';
+        this._textCanvas.style.top = '0px';
+        this._container.appendChild(this._textCanvas);
+        this._listCanvas = document.createElement('canvas');
+        this._listCanvas.style.position = 'absolute';
+        this._listCanvas.style.left = '0px';
+        this._listCanvas.style.top = '0px';
+        this._root.appendChild(this._listCanvas);
     }
 
     async init(): Promise<boolean> {
         this.CanvasKit = await getCanvasKit();
         this.FontMgr = this.CanvasKit.TypefaceFontProvider.Make();
 
-        this._surface = this.CanvasKit.MakeCanvasSurface(this._canvasElement)!;
+        this._surface = this.CanvasKit.MakeCanvasSurface(this._textCanvas)!;
         this._canvas = this._surface.getCanvas();
 
         return true;
@@ -310,10 +323,10 @@ export class TMRenderer implements IRenderer {
         const CanvasKit = this.CanvasKit!;
         this._container.style.width = `${width}px`;
         this._container.style.height = `${height}px`;
-        this._canvasElement.width = width * window.devicePixelRatio;
-        this._canvasElement.height = height * window.devicePixelRatio;
-        this._canvasElement.style.width = `${width}px`;
-        this._canvasElement.style.height = `${height}px`;
+        this._textCanvas.width = width * window.devicePixelRatio;
+        this._textCanvas.height = height * window.devicePixelRatio;
+        this._textCanvas.style.width = `${width}px`;
+        this._textCanvas.style.height = `${height}px`;
 
         if (!this._paragraph || !this._textMetrics) {
             this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
@@ -321,7 +334,7 @@ export class TMRenderer implements IRenderer {
             return;
         }
 
-        this._surface = CanvasKit.MakeCanvasSurface(this._canvasElement)!;
+        this._surface = CanvasKit.MakeCanvasSurface(this._textCanvas)!;
         this._canvas = this._surface.getCanvas();
         this.canvas.clear(CanvasKit.Color4f(1.0, 1.0, 1.0, 0.0));
 
