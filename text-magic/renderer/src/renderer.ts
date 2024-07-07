@@ -498,17 +498,19 @@ export class TMRenderer implements IRenderer {
                                 index++
                             ) {
                                 const targetRow = this._textMetrics!.rows[index];
-                                const startCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.startIndex];
-                                const endCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.textCanvas.drawRect4f(
-                                    startCharacter.x,
-                                    (targetRow.contentTop + row.contentBottom) / 2,
-                                    endCharacter.x + endCharacter.width,
-                                    targetRow.contentTop + targetRow.contentHeight,
-                                    highlightPaint
-                                );
+                                if (targetRow.width > 0) {
+                                    const startCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.startIndex];
+                                    const endCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.endIndex];
+                                    this.textCanvas.drawRect4f(
+                                        startCharacter.x,
+                                        (targetRow.contentTop + targetRow.contentBottom) / 2,
+                                        endCharacter.x + endCharacter.width,
+                                        targetRow.contentTop + targetRow.contentHeight,
+                                        highlightPaint
+                                    );
+                                }
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
                             this.textCanvas.drawRect4f(
@@ -536,19 +538,21 @@ export class TMRenderer implements IRenderer {
                                 index++
                             ) {
                                 const targetRow = this._textMetrics!.rows[index];
-                                const startCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.startIndex];
-                                const endCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.textCanvas.drawOval(
-                                    CanvasKit.XYWHRect(
-                                        startCharacter.x,
-                                        targetRow.contentTop,
-                                        endCharacter.x + endCharacter.width - startCharacter.x,
-                                        targetRow.contentHeight
-                                    ),
-                                    highlightPaint
-                                );
+                                if (targetRow.width > 0) {
+                                    const startCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.startIndex];
+                                    const endCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.endIndex];
+                                    this.textCanvas.drawOval(
+                                        CanvasKit.XYWHRect(
+                                            startCharacter.x,
+                                            targetRow.contentTop,
+                                            endCharacter.x + endCharacter.width - startCharacter.x,
+                                            targetRow.contentHeight
+                                        ),
+                                        highlightPaint
+                                    );
+                                }
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
                             this.textCanvas.drawOval(
@@ -585,25 +589,28 @@ export class TMRenderer implements IRenderer {
                                 index++
                             ) {
                                 const targetRow = this._textMetrics!.rows[index];
-                                const startCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.startIndex];
-                                const endCharacter =
-                                    this._textMetrics!.allCharacter[targetRow.endIndex];
-                                this.textCanvas.drawLine(
-                                    startCharacter.x,
-                                    targetRow.contentTop + targetRow.contentHeight / 4,
-                                    endCharacter.x + endCharacter.width,
-                                    targetRow.contentBottom,
-                                    highlightPaint
-                                );
-                                this.textCanvas.drawLine(
-                                    character.x,
-                                    targetRow.contentBottom,
-                                    this._textMetrics!.allCharacter[targetRow.endIndex].x +
-                                        this._textMetrics!.allCharacter[targetRow.endIndex].width,
-                                    targetRow.contentTop + targetRow.contentHeight / 4,
-                                    highlightPaint
-                                );
+                                if (targetRow.width > 0) {
+                                    const startCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.startIndex];
+                                    const endCharacter =
+                                        this._textMetrics!.allCharacter[targetRow.endIndex];
+                                    this.textCanvas.drawLine(
+                                        startCharacter.x,
+                                        targetRow.contentTop + targetRow.contentHeight / 4,
+                                        endCharacter.x + endCharacter.width,
+                                        targetRow.contentBottom,
+                                        highlightPaint
+                                    );
+                                    this.textCanvas.drawLine(
+                                        startCharacter.x,
+                                        targetRow.contentBottom,
+                                        this._textMetrics!.allCharacter[targetRow.endIndex].x +
+                                            this._textMetrics!.allCharacter[targetRow.endIndex]
+                                                .width,
+                                        targetRow.contentTop + targetRow.contentHeight / 4,
+                                        highlightPaint
+                                    );
+                                }
                             }
                             const endRow = this._textMetrics!.rows[endCharacter.whichRow];
                             this.textCanvas.drawLine(
