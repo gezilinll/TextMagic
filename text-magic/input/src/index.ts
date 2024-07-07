@@ -170,7 +170,11 @@ export class TMInput implements IInput {
         this._media.removeEventListener('change', this._devicePixelRatioListener);
     }
 
-    getCursorByCoordinate(mouseX: number, mouseY: number): TMCursorInfo {
+    getCursorByCoordinate(
+        mouseX: number,
+        mouseY: number,
+        backwardWhenNewLine: boolean = true
+    ): TMCursorInfo {
         if (
             this._textMetrics.allCharacter.length === 0 ||
             (this._textMetrics.allCharacter.length === 1 &&
@@ -235,7 +239,7 @@ export class TMInput implements IInput {
         const targetBound = this._textMetrics.allCharacter[result];
         if (targetBound.char === '\n') {
             return {
-                afterCharacterIndex: result - 1,
+                afterCharacterIndex: backwardWhenNewLine ? result - 1 : result,
                 cursorPosition: 'after-index',
             };
         } else {
@@ -840,7 +844,11 @@ export class TMInput implements IInput {
                 targetCoordinate.x = cursorRenderInfo.x;
                 targetCoordinate.y = cursorRenderInfo.rowTop - 2;
             }
-            const newCursor = this.getCursorByCoordinate(targetCoordinate.x, targetCoordinate.y);
+            const newCursor = this.getCursorByCoordinate(
+                targetCoordinate.x,
+                targetCoordinate.y,
+                false
+            );
             if (
                 newCursor.afterCharacterIndex > 0 &&
                 this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
@@ -878,12 +886,6 @@ export class TMInput implements IInput {
                 targetCoordinate.y = cursorRenderInfo.y + cursorRenderInfo.height + 2;
             }
             const newCursor = this.getCursorByCoordinate(targetCoordinate.x, targetCoordinate.y);
-            if (
-                this._textMetrics.allCharacter[newCursor.afterCharacterIndex].char === '\n' &&
-                newCursor.afterCharacterIndex + 1 <= this._textMetrics.allCharacter.length - 1
-            ) {
-                newCursor.afterCharacterIndex++;
-            }
             if (e.shiftKey) {
                 if (rangeIsValid) {
                     this._selectRange.start.afterCharacterIndex = selectRange.start - 1;
