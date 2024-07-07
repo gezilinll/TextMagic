@@ -761,7 +761,7 @@ export class TMRenderer implements IRenderer {
                 if (this._listStyleType === 'disc' || this._listStyleType === 'circle') {
                     this.listCanvas.drawCircle(
                         (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2,
-                        (row.top + row.bottom) / 2,
+                        (row.contentTop + row.contentBottom) / 2,
                         20,
                         paint
                     );
@@ -770,7 +770,7 @@ export class TMRenderer implements IRenderer {
                         this._listStyleType,
                         (this.LIST_CANVAS_WIDTH * window.devicePixelRatio) / 2 -
                             ((this.LIST_EMOJI_FONT_SIZE * window.devicePixelRatio) / 3) * 2,
-                        (row.top + row.bottom) / 2 +
+                        (row.contentTop + row.contentBottom) / 2 +
                             (this.LIST_EMOJI_FONT_SIZE * window.devicePixelRatio) / 3,
                         paint,
                         font
