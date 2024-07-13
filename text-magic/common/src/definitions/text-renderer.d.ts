@@ -10,7 +10,7 @@ export interface TMRenderer {
 
     setEmojiFont(font: TMFontInfo);
 
-    registerFont(font: TMFontInfo);
+    registerFont(font: TMFontInfo): void;
 
     getRootContainer(): HTMLDivElement;
 
