@@ -6,7 +6,7 @@
 
 [TextMagic - A Next Generation of Text Input](https://text-magic.gezilinll.com) requires an initial download of approximately 10MB of resources. Depending on server network speed, this may take 10-20 seconds.
 
-<img src="https://p.ipic.vip/2yms69.gif" alt="text-magic" style="zoom:25%;" />
+![Text-Mgaic](text-magic.gif)
 
 ## How to use
 
